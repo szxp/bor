@@ -130,8 +130,11 @@ func getLinks(ctx context.Context, urls []string) ([]string, error) {
 
 		host := uu.Scheme + "://" + uu.Host
 		for _, rel := range rels {
-			l := path.Join(host, rel)
-			links[l] = struct{}{}
+			l, err := url.Parse(path.Join(host, rel))
+			if err != nil {
+				return nil, err
+			}
+			links[l.String()] = struct{}{}
 		}
 	}
 
@@ -156,8 +159,11 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 		}
 
 		for _, a := range attrs {
-			rel := a["href"]
-			links[rel] = struct{}{}
+			rel, err := url.Parse(a["href"])
+			if err != nil {
+				return nil, err
+			}
+			links[rel.String()] = struct{}{}
 		}
 
 		err = runWithTimeOut(
