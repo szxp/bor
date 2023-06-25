@@ -17,19 +17,21 @@ const flagUserAgent = "user-agent"
 const defUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
 type cmd struct {
-	cmd    string
-	syntax string
-	desc   string
-	fn     func(*flag.FlagSet) error
+	cmd     string
+	syntax  string
+	desc    string
+	example string
+	fn      func(*flag.FlagSet) error
 }
 
 func main() {
 	cmds := []*cmd{
 		&cmd{
-			cmd:    "csv",
-			syntax: "fran [<option>...] csv <search_url>...",
-			desc:   "Collects page links from search results. Downloads master data from page links. Prints master data in comma separated values (CSV).",
-			fn:     cmdCsv,
+			cmd:     "csv",
+			syntax:  "fran [<option>...] csv <search_url>...",
+			desc:    "Collects page links from search results. Downloads master data from page links. Prints master data in comma separated values (CSV).",
+			example: "fran csv \"https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC\"",
+			fn:      cmdCsv,
 		},
 	}
 
@@ -119,8 +121,8 @@ func getLinks(ctx context.Context, urls []string) ([]string, error) {
 
 		host := uu.Scheme + "://" + uu.Host
 		for _, a := range attrs {
-			pu := path.Join(host, a["href"])
-			links[pu] = struct{}{}
+			l := path.Join(host, a["href"])
+			links[l] = struct{}{}
 		}
 	}
 
@@ -146,6 +148,9 @@ func printUsage(cmds []*cmd, cmd *flag.FlagSet) {
 		fmt.Println("   ", c.syntax)
 		fmt.Println()
 		fmt.Println("   ", c.desc)
+		fmt.Println()
+		fmt.Println("    Example")
+		fmt.Println("   ", c.example)
 	}
 	fmt.Println()
 	fmt.Println("Options:")
