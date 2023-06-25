@@ -3,78 +3,143 @@ package main
 import (
 	"flag"
 	"fmt"
+	//"log"
+	"context"
+	"net/url"
 	"os"
-	//"context"
+	"path"
 	//"github.com/chromedp/cdproto/runtime"
-	//"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp"
 )
-
 
 const flagUserAgent = "user-agent"
 
 const defUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
-
 type cmd struct {
-	cmd string
+	cmd    string
 	syntax string
-	desc string
-	fn func(*flag.FlagSet)
+	desc   string
+	fn     func(*flag.FlagSet) error
 }
 
 func main() {
 	cmds := []*cmd{
 		&cmd{
-			cmd: "csv",
-			syntax: "fox csv [option...] search_url...",
-			desc: "Collects page links from search results. Downloads master data page links. Prints master data in comma separated values (CSV).",
-			fn: cmdCsv,
+			cmd:    "csv",
+			syntax: "fran [<option>...] csv <search_url>...",
+			desc:   "Collects page links from search results. Downloads master data from page links. Prints master data in comma separated values (CSV).",
+			fn:     cmdCsv,
 		},
 	}
 
-	flags := flag.NewFlagSet("flags", flag.ExitOnError)
-	addUserAgentFlag(flags)
+	cmd := flag.CommandLine
+	addUserAgentFlag(cmd)
+
+	flag.Usage = func() {
+		printUsage(cmds, cmd)
+		return
+	}
 
 	if len(os.Args) < 2 {
 		fmt.Println("no command")
-		printUsage(cmds, flags)
+		printUsage(cmds, cmd)
 		os.Exit(1)
 	}
 
+	flag.Parse()
+	//fmt.Println("user-agent:", cmd.Lookup(flagUserAgent).Value)
 
-	flags.Parse(os.Args[2:])
-	//fmt.Println("user-agent:", flags.Lookup(flagUserAgent).Value )
-
-	cmd := os.Args[1]
+	c0 := cmd.Args()[0]
 	for _, c := range cmds {
-		if c.cmd == cmd {
-			c.fn(flags)
+		if c.cmd == c0 {
+			err := c.fn(cmd)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 			return
 		}
 	}
 
 	fmt.Println("unexpected command")
-	printUsage(cmds, flags)
+	printUsage(cmds, cmd)
 	os.Exit(1)
 }
 
-func cmdLinks(flags *flag.FlagSet) {
-	fmt.Println("links")
+func cmdCsv(cmd *flag.FlagSet) error {
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", false),
+		chromedp.Flag("disable-gpu", false),
+		chromedp.Flag("enable-automation", false),
+		chromedp.Flag("disable-extensions", false),
+	)
+
+	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer acancel()
+	ctx, cancel := chromedp.NewContext(
+		actx,
+		//chromedp.WithDebugf(log.Printf),
+	)
+	defer cancel()
+
+	urls := cmd.Args()[1:]
+	links, err := getLinks(ctx, urls)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(links)
+	return nil
 }
 
-func cmdPages(flags *flag.FlagSet) {
-	fmt.Println("pages")
-}
+func getLinks(ctx context.Context, urls []string) ([]string, error) {
+	links := make(map[string]struct{}, 15000)
+	for _, u := range urls {
+		attrs := make([]map[string]string, 0, 100)
+		err := chromedp.Run(ctx, chromedp.Tasks{
+			chromedp.Navigate(u),
+			//chromedp.WaitVisible(`//button[contains(text(),'Ablehnen')]`, chromedp.BySearch),
+			//chromedp.Click(`//button[contains(text(),'Ablehnen')]`, chromedp.BySearch),
+			// search results loaded
+			chromedp.WaitVisible(`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`, chromedp.BySearch),
+			chromedp.Click(`//app-page-bar//button[contains(text(), '100')]`, chromedp.BySearch),
+			chromedp.WaitVisible(`//app-loading-spinner`, chromedp.BySearch),
+			chromedp.WaitNotPresent(`//app-loading-spinner`, chromedp.BySearch),
+			chromedp.AttributesAll(`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`, &attrs, chromedp.BySearch),
+		})
+		if err != nil {
+			return nil, err
+		}
 
-func cmdCsv(flags *flag.FlagSet) {
-	fmt.Println("csv")
+		uu, err := url.Parse(u)
+		if err != nil {
+			return nil, err
+		}
+
+		host := uu.Scheme + "://" + uu.Host
+		for _, a := range attrs {
+			pu := path.Join(host, a["href"])
+			links[pu] = struct{}{}
+		}
+	}
+
+	res := make([]string, 0, len(links))
+	for k, _ := range links {
+		res = append(res, k)
+	}
+
+	return res, nil
 }
 
 func addUserAgentFlag(cmd *flag.FlagSet) *string {
-	return cmd.String(flagUserAgent, defUserAgent, "User agent header value")
+	return cmd.String(flagUserAgent, defUserAgent, "User-agent HTTP header value")
 }
 
-func printUsage(cmds []*cmd, flags *flag.FlagSet) {
+func printUsage(cmds []*cmd, cmd *flag.FlagSet) {
+	fmt.Println("Usage:")
+	fmt.Println("  fran [<option>...] <command> [<arg>...]")
+	fmt.Println()
 	fmt.Println("Commands:")
 	for _, c := range cmds {
 		fmt.Println(" ", c.cmd)
@@ -84,6 +149,5 @@ func printUsage(cmds []*cmd, flags *flag.FlagSet) {
 	}
 	fmt.Println()
 	fmt.Println("Options:")
-	flags.PrintDefaults()
+	cmd.PrintDefaults()
 }
-
