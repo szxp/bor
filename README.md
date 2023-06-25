@@ -1,2 +1,2 @@
-# fox
+# bor
 Börse Frankfurt scraper
