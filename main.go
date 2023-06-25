@@ -3,12 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"sort"
+	"time"
 	//"log"
 	"context"
 	"net/url"
 	"os"
 	"path"
 	//"github.com/chromedp/cdproto/runtime"
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 )
 
@@ -91,25 +94,31 @@ func cmdCsv(cmd *flag.FlagSet) error {
 		return err
 	}
 
-	fmt.Println(links)
+	sort.Strings(links)
+	for _, l := range links {
+		fmt.Println(l)
+	}
 	return nil
 }
 
 func getLinks(ctx context.Context, urls []string) ([]string, error) {
 	links := make(map[string]struct{}, 15000)
+	res := make([]string, 0, 15000)
+
 	for _, u := range urls {
-		attrs := make([]map[string]string, 0, 100)
 		err := chromedp.Run(ctx, chromedp.Tasks{
 			chromedp.Navigate(u),
-			//chromedp.WaitVisible(`//button[contains(text(),'Ablehnen')]`, chromedp.BySearch),
-			//chromedp.Click(`//button[contains(text(),'Ablehnen')]`, chromedp.BySearch),
-			// search results loaded
 			chromedp.WaitVisible(`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`, chromedp.BySearch),
+			chromedp.WaitNotPresent(`//app-loading-spinner`, chromedp.BySearch),
 			chromedp.Click(`//app-page-bar//button[contains(text(), '100')]`, chromedp.BySearch),
 			chromedp.WaitVisible(`//app-loading-spinner`, chromedp.BySearch),
 			chromedp.WaitNotPresent(`//app-loading-spinner`, chromedp.BySearch),
-			chromedp.AttributesAll(`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`, &attrs, chromedp.BySearch),
 		})
+		if err != nil {
+			return nil, err
+		}
+
+		rels, err := getLinksRel(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -120,9 +129,60 @@ func getLinks(ctx context.Context, urls []string) ([]string, error) {
 		}
 
 		host := uu.Scheme + "://" + uu.Host
-		for _, a := range attrs {
-			l := path.Join(host, a["href"])
+		for _, rel := range rels {
+			l := path.Join(host, rel)
 			links[l] = struct{}{}
+		}
+	}
+
+	for k, _ := range links {
+		res = append(res, k)
+	}
+
+	return res, nil
+}
+
+func getLinksRel(ctx context.Context) ([]string, error) {
+	links := make(map[string]struct{}, 100)
+	for {
+		attrs := make([]map[string]string, 0, 100)
+		nodes := make([]*cdp.Node, 0, 100)
+
+		err := chromedp.Run(ctx, chromedp.Tasks{
+			chromedp.AttributesAll(`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`, &attrs, chromedp.BySearch),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, a := range attrs {
+			rel := a["href"]
+			links[rel] = struct{}{}
+		}
+
+		err = runWithTimeOut(
+			ctx,
+			3*time.Second,
+			chromedp.Tasks{
+				chromedp.Nodes(`//app-page-bar[1]//button[contains(@class, 'active') and contains(@class,'page-bar-type-button-width-auto')]/following-sibling::button[contains(@class, 'page-bar-type-button-width-auto')]`, &nodes, chromedp.BySearch),
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		//fmt.Println(len(nodes))
+		if len(nodes) == 0 {
+			break
+		}
+
+		err = chromedp.Run(ctx, chromedp.Tasks{
+			chromedp.Click(`//app-page-bar[1]//button[contains(@class, 'active') and contains(@class,'page-bar-type-button-width-auto')]/following-sibling::button[contains(@class, 'page-bar-type-button-width-auto')][1]`, chromedp.BySearch),
+			chromedp.WaitVisible(`//app-loading-spinner`, chromedp.BySearch),
+			chromedp.WaitNotPresent(`//app-loading-spinner`, chromedp.BySearch),
+		})
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -132,6 +192,23 @@ func getLinks(ctx context.Context, urls []string) ([]string, error) {
 	}
 
 	return res, nil
+}
+
+func runWithTimeOut(
+	ctx context.Context,
+	timeout time.Duration,
+	tasks chromedp.Tasks,
+) error {
+	timeoutContext, cancel := context.WithTimeout(
+		ctx,
+		timeout,
+	)
+	defer cancel()
+	err := chromedp.Run(timeoutContext, tasks)
+	if err != nil && err != context.DeadlineExceeded {
+		return err
+	}
+	return nil
 }
 
 func addUserAgentFlag(cmd *flag.FlagSet) *string {
