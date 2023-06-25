@@ -1,2 +1,2 @@
-# bor
+# fran
 Börse Frankfurt scraper
