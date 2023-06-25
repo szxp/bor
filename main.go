@@ -1,58 +1,89 @@
-// Some command-line tools, like the `go` tool or `git`
-// have many *subcommands*, each with its own set of
-// flags. For example, `go build` and `go get` are two
-// different subcommands of the `go` tool.
-// The `flag` package lets us easily define simple
-// subcommands that have their own flags.
-
 package main
 
 import (
 	"flag"
 	"fmt"
 	"os"
+	//"context"
+	//"github.com/chromedp/cdproto/runtime"
+	//"github.com/chromedp/chromedp"
 )
 
+
+const flagUserAgent = "user-agent"
+
+const defUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+
+
+type cmd struct {
+	cmd string
+	syntax string
+	desc string
+	fn func(*flag.FlagSet)
+}
+
 func main() {
+	cmds := []*cmd{
+		&cmd{
+			cmd: "csv",
+			syntax: "fox csv [option...] search_url...",
+			desc: "Collects page links from search results. Downloads master data page links. Prints master data in comma separated values (CSV).",
+			fn: cmdCsv,
+		},
+	}
 
-	// We declare a subcommand using the `NewFlagSet`
-	// function, and proceed to define new flags specific
-	// for this subcommand.
-	fooCmd := flag.NewFlagSet("foo", flag.ExitOnError)
-	fooEnable := fooCmd.Bool("enable", false, "enable")
-	fooName := fooCmd.String("name", "", "name")
+	flags := flag.NewFlagSet("flags", flag.ExitOnError)
+	addUserAgentFlag(flags)
 
-	// For a different subcommand we can define different
-	// supported flags.
-	barCmd := flag.NewFlagSet("bar", flag.ExitOnError)
-	barLevel := barCmd.Int("level", 0, "level")
-
-	// The subcommand is expected as the first argument
-	// to the program.
 	if len(os.Args) < 2 {
-		fmt.Println("expected 'foo' or 'bar' subcommands")
+		fmt.Println("no command")
+		printUsage(cmds, flags)
 		os.Exit(1)
 	}
 
-	// Check which subcommand is invoked.
-	switch os.Args[1] {
 
-	// For every subcommand, we parse its own flags and
-	// have access to trailing positional arguments.
-	case "foo":
-		fooCmd.Parse(os.Args[2:])
-		fmt.Println("subcommand 'foo'")
-		fmt.Println("  enable:", *fooEnable)
-		fmt.Println("  name:", *fooName)
-		fmt.Println("  tail:", fooCmd.Args())
-	case "bar":
-		barCmd.Parse(os.Args[2:])
-		fmt.Println("subcommand 'bar'")
-		fmt.Println("  level:", *barLevel)
-		fmt.Println("  tail:", barCmd.Args())
-	default:
-		fmt.Println("expected 'foo' or 'bar' subcommands")
-		os.Exit(1)
+	flags.Parse(os.Args[2:])
+	//fmt.Println("user-agent:", flags.Lookup(flagUserAgent).Value )
+
+	cmd := os.Args[1]
+	for _, c := range cmds {
+		if c.cmd == cmd {
+			c.fn(flags)
+			return
+		}
 	}
+
+	fmt.Println("unexpected command")
+	printUsage(cmds, flags)
+	os.Exit(1)
+}
+
+func cmdLinks(flags *flag.FlagSet) {
+	fmt.Println("links")
+}
+
+func cmdPages(flags *flag.FlagSet) {
+	fmt.Println("pages")
+}
+
+func cmdCsv(flags *flag.FlagSet) {
+	fmt.Println("csv")
+}
+
+func addUserAgentFlag(cmd *flag.FlagSet) *string {
+	return cmd.String(flagUserAgent, defUserAgent, "User agent header value")
+}
+
+func printUsage(cmds []*cmd, flags *flag.FlagSet) {
+	fmt.Println("Commands:")
+	for _, c := range cmds {
+		fmt.Println(" ", c.cmd)
+		fmt.Println("   ", c.syntax)
+		fmt.Println()
+		fmt.Println("   ", c.desc)
+	}
+	fmt.Println()
+	fmt.Println("Options:")
+	flags.PrintDefaults()
 }
 
