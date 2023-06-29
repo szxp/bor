@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
-	"sort"
+	"strings"
+	//"sort"
 	"time"
 	//"log"
 	"context"
+	"io"
 	"net/url"
 	"os"
 	"path"
@@ -15,64 +18,98 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-const flagUserAgent = "user-agent"
-
-const defUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-
-type cmd struct {
-	cmd     string
-	syntax  string
-	desc    string
-	example string
-	fn      func(*flag.FlagSet) error
-}
+const flagOut = "out"
+const flagForce = "force"
+const flagFormat = "format"
 
 func main() {
-	cmds := []*cmd{
-		&cmd{
-			cmd:     "csv",
-			syntax:  "fran [<option>...] csv <search_url>...",
-			desc:    "Collects page links from search results. Downloads master data from page links. Prints master data in comma separated values (CSV).",
-			example: "fran csv \"https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC\"",
-			fn:      cmdCsv,
-		},
-	}
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+	addOutFlag(fs)
+	addForceFlag(fs)
+	addFormatFlag(fs)
 
-	cmd := flag.CommandLine
-	addUserAgentFlag(cmd)
-
-	flag.Usage = func() {
-		printUsage(cmds, cmd)
-		return
+	fs.Usage = func() {
+		printUsage(fs)
 	}
 
 	if len(os.Args) < 2 {
 		fmt.Println("no command")
-		printUsage(cmds, cmd)
+		printUsage(fs)
 		os.Exit(1)
 	}
 
-	flag.Parse()
-	//fmt.Println("user-agent:", cmd.Lookup(flagUserAgent).Value)
-
-	c0 := cmd.Args()[0]
-	for _, c := range cmds {
-		if c.cmd == c0 {
-			err := c.fn(cmd)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			return
-		}
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		fmt.Println(err)
+		printUsage(fs)
+		os.Exit(1)
 	}
 
-	fmt.Println("unexpected command")
-	printUsage(cmds, cmd)
-	os.Exit(1)
+	//fmt.Println(cmd.Args())
+
+	cmd, err := parseCmd(os.Args[1], fs)
+	if err != nil {
+		fmt.Println(err)
+		printUsage(fs)
+		os.Exit(1)
+	}
+
+	err = execCmd(cmd)
+	if err != nil {
+		fmt.Println(err)
+		printUsage(fs)
+		os.Exit(1)
+	}
 }
 
-func cmdCsv(cmd *flag.FlagSet) error {
+
+func execCmd(cmd *cmd) error {
+	switch cmd.name {
+		case cnLinks:
+			return execCmdLinks(cmd)
+		case cnExport:
+			return execCmdExport(cmd)
+		default:
+			return fmt.Errorf("unexpected command: " + string(cmd.name))
+	}
+}
+
+func execCmdLinks(cmd *cmd) error {
+	w, closeFn, err := openOut(cmd.out, cmd.force)
+	if err != nil {
+		return err
+	}
+	defer closeFn()
+	return getLinks(w, cmd.args)
+}
+
+func openOut(out string, force bool) (io.Writer, func(), error) {
+	if out != "" {
+		flags := os.O_WRONLY|os.O_CREATE
+		if force {
+			flags |= os.O_TRUNC
+		} else {
+			flags |= os.O_EXCL
+		}
+
+		f, err := os.OpenFile(out, flags, 0755)
+		if err != nil {
+			return nil, nil, err
+		}
+		closeFn := func() {
+			f.Close()
+		}
+		return f, closeFn, nil
+	}
+
+	b := bufio.NewWriter(os.Stdout)
+	closeFn := func() {
+		b.Flush()
+	}
+	return b, closeFn, nil
+}
+
+func newChromeContext(ctx0 context.Context) (context.Context, func()) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-gpu", false),
@@ -80,30 +117,21 @@ func cmdCsv(cmd *flag.FlagSet) error {
 		chromedp.Flag("disable-extensions", false),
 	)
 
-	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer acancel()
+	actx, acancel := chromedp.NewExecAllocator(ctx0, opts...)
 	ctx, cancel := chromedp.NewContext(
 		actx,
 		//chromedp.WithDebugf(log.Printf),
 	)
-	defer cancel()
 
-	urls := cmd.Args()[1:]
-	links, err := getLinks(ctx, urls)
-	if err != nil {
-		return err
+	return ctx, func() {
+		cancel()
+		acancel()
 	}
-
-	sort.Strings(links)
-	for _, l := range links {
-		fmt.Println(l)
-	}
-	return nil
 }
 
-func getLinks(ctx context.Context, urls []string) ([]string, error) {
-	links := make(map[string]struct{}, 15000)
-	res := make([]string, 0, 15000)
+func getLinks(w io.Writer, urls []string) error {
+	ctx, cancel := newChromeContext(context.Background())
+	defer cancel()
 
 	for _, u := range urls {
 		err := chromedp.Run(ctx, chromedp.Tasks{
@@ -115,34 +143,34 @@ func getLinks(ctx context.Context, urls []string) ([]string, error) {
 			chromedp.WaitNotPresent(`//app-loading-spinner`, chromedp.BySearch),
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		rels, err := getLinksRel(ctx)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		uu, err := url.Parse(u)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		host := uu.Scheme + "://" + uu.Host
 		for _, rel := range rels {
 			l, err := url.Parse(path.Join(host, rel))
 			if err != nil {
-				return nil, err
+				return err
 			}
-			links[l.String()] = struct{}{}
+
+			_, err = fmt.Fprintln(w, l)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	for k, _ := range links {
-		res = append(res, k)
-	}
-
-	return res, nil
+	return nil
 }
 
 func getLinksRel(ctx context.Context) ([]string, error) {
@@ -173,7 +201,7 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 				chromedp.Nodes(`//app-page-bar[1]//button[contains(@class, 'active') and contains(@class,'page-bar-type-button-width-auto')]/following-sibling::button[contains(@class, 'page-bar-type-button-width-auto')]`, &nodes, chromedp.BySearch),
 			},
 		)
-		if err != nil {
+		if err != nil && err != context.DeadlineExceeded {
 			return nil, err
 		}
 
@@ -200,6 +228,56 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 	return res, nil
 }
 
+func execCmdExport(cmd *cmd) error {
+	files := cmd.args
+	if len(files) == 0 {
+		return fmt.Errorf("no link files")
+	}
+
+	if cmd.out == "" {
+		return fmt.Errorf("output file path must be specified, use the -out option")
+	}
+	w, closeFn, err := openOut(cmd.out, cmd.force)
+	if err != nil {
+		return err
+	}
+	defer closeFn()
+
+	ctx, cancel := newChromeContext(context.Background())
+	defer cancel()
+
+	for _, p := range files {
+		err := exportLinksFile(ctx, w, p)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func exportLinksFile(ctx context.Context, w io.Writer, p string) error {
+	f, err := os.Open(p)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return exportLinksReader(ctx, w, f)
+}
+
+func exportLinksReader(ctx context.Context, w io.Writer, r io.Reader) error {
+	sc := bufio.NewScanner(r)
+	for sc.Scan() {
+		l := strings.TrimSpace(sc.Text())
+		fmt.Println(l)
+	}
+	if err := sc.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+	}
+
+	return nil
+}
+
 func runWithTimeOut(
 	ctx context.Context,
 	timeout time.Duration,
@@ -210,32 +288,130 @@ func runWithTimeOut(
 		timeout,
 	)
 	defer cancel()
-	err := chromedp.Run(timeoutContext, tasks)
-	if err != nil && err != context.DeadlineExceeded {
-		return err
+	return chromedp.Run(timeoutContext, tasks)
+}
+
+func addOutFlag(cmd *flag.FlagSet) *string {
+	return cmd.String(flagOut, "", "Output file path. Use the -format option to specify the format.")
+}
+
+func addForceFlag(cmd *flag.FlagSet) *bool {
+	return cmd.Bool(flagForce, false, "Overwrite output file if it already exists.")
+}
+
+func addFormatFlag(cmd *flag.FlagSet) *string {
+	return cmd.String(flagFormat, "xlsx", "Format of the output file. Supported values are: xlsx.")
+}
+
+func flagVal(fs *flag.FlagSet, name string) string {
+	return fs.Lookup(name).Value.String()
+}
+
+
+type cmdHelp struct {
+	name    cmdName
+	syntax  string
+	desc    string
+	example string
+}
+
+var cmdHelps = []*cmdHelp{
+		&cmdHelp{
+			name:     cnLinks,
+			syntax:  "fran links [-out <file>] [--force] <search_url>...",
+			desc:    "Collects page links from search results.",
+			example: "fran links -out links-eu.txt \"https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC\"",
+		},
+		&cmdHelp{
+			name:     cnExport,
+			syntax:  "fran export [-format <format>] [-out <file>] [--force] <links_file>...",
+			desc:    "Downloads master data from page links and produces it in the specified format. See the supported formats at the -format option.",
+			example: "fran export -format xlsx -out eu-and-us.xlsx links-eu.txt links-us.txt",
+		},
 	}
-	return nil
-}
 
-func addUserAgentFlag(cmd *flag.FlagSet) *string {
-	return cmd.String(flagUserAgent, defUserAgent, "User-agent HTTP header value")
-}
-
-func printUsage(cmds []*cmd, cmd *flag.FlagSet) {
+func printUsage(fs *flag.FlagSet) {
 	fmt.Println("Usage:")
-	fmt.Println("  fran [<option>...] <command> [<arg>...]")
+	fmt.Println("  fran <command> [<option>...] [<arg>...]")
 	fmt.Println()
 	fmt.Println("Commands:")
-	for _, c := range cmds {
-		fmt.Println(" ", c.cmd)
+	for _, c := range cmdHelps {
+		fmt.Println(" ", string(c.name))
 		fmt.Println("   ", c.syntax)
 		fmt.Println()
 		fmt.Println("   ", c.desc)
 		fmt.Println()
 		fmt.Println("    Example")
 		fmt.Println("   ", c.example)
+		fmt.Println()
 	}
-	fmt.Println()
 	fmt.Println("Options:")
-	cmd.PrintDefaults()
+	fs.PrintDefaults()
 }
+
+type cmd struct {
+    name cmdName
+    args []string
+    out string
+    force bool
+    format format
+}
+
+type cmdName string
+const (
+	cnLinks cmdName = "links"
+	cnExport cmdName = "export"
+)
+
+type format string
+const (
+	fXlsx format = "xlsx"
+	fCsv format = "csv"
+)
+
+func parseCmd(name string, fs *flag.FlagSet) (*cmd, error) {
+	switch name {
+		case string(cnLinks):
+			return parseCmdLinks(fs)
+		case string(cnExport):
+			return parseCmdExport(fs)
+		default:
+			return nil, fmt.Errorf("unknown command: " + name)
+	}
+}
+
+func parseCmdLinks(fs *flag.FlagSet) (*cmd, error) {
+	return parseCmdText(cnLinks, fs)
+}
+
+func parseCmdExport(fs *flag.FlagSet) (*cmd, error) {
+	return parseCmdText(cnExport, fs)
+}
+
+func parseCmdText(name cmdName, fs *flag.FlagSet) (*cmd, error) {
+	cmd := &cmd{
+		name: name,
+		args: fs.Args(),
+	}
+	var err error
+
+	fs.Visit(func(f *flag.Flag){
+		if err != nil {
+			return
+		}
+
+		switch f.Name {
+			default:
+				err = fmt.Errorf("unexpected option: " + f.Name)
+		}
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return cmd, nil
+
+	//out := fs.Lookup(flagOut).Value.String()
+	//force := fs.Lookup(flagForce).Value.String()
+}
+
