@@ -18,36 +18,8 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-const flagOut = "out"
-const flagForce = "force"
-const flagFormat = "format"
-
 func main() {
-	fs := flag.NewFlagSet("", flag.ExitOnError)
-	addOutFlag(fs)
-	addForceFlag(fs)
-	addFormatFlag(fs)
-
-	fs.Usage = func() {
-		printUsage(fs)
-	}
-
-	if len(os.Args) < 2 {
-		fmt.Println("no command")
-		printUsage(fs)
-		os.Exit(1)
-	}
-
-	err := fs.Parse(os.Args[2:])
-	if err != nil {
-		fmt.Println(err)
-		printUsage(fs)
-		os.Exit(1)
-	}
-
-	//fmt.Println(cmd.Args())
-
-	cmd, err := parseCmd(os.Args[1], fs)
+	cmd, fs, err := parseCmd()
 	if err != nil {
 		fmt.Println(err)
 		printUsage(fs)
@@ -57,20 +29,195 @@ func main() {
 	err = execCmd(cmd)
 	if err != nil {
 		fmt.Println(err)
-		printUsage(fs)
 		os.Exit(1)
 	}
 }
 
+const (
+	flagOut    = "out"
+	flagForce  = "force"
+	flagFormat = "format"
+)
 
+type cmd struct {
+	name   cmdName
+	args   []string
+	out    string
+	force  bool
+	format format
+}
+
+const (
+	cnLinks  cmdName = "links"
+	cnExport cmdName = "export"
+)
+
+type cmdName string
+
+func parseCmdName(name string) (cmdName, error) {
+	switch name {
+	case string(cnLinks):
+		return cnLinks, nil
+	case string(cnExport):
+		return cnExport, nil
+	default:
+		return "", fmt.Errorf("unknown command: " + name)
+	}
+}
+
+const (
+	fXlsx format = "xlsx"
+	fCsv  format = "csv"
+)
+
+type format string
+
+func parseFormat(val string) (format, error) {
+	switch val {
+	case string(fXlsx):
+		return fXlsx, nil
+	case string(fCsv):
+		return fCsv, nil
+	default:
+		return "", fmt.Errorf("unknown format: " + val)
+	}
+}
+
+func parseForce(val string) (bool, error) {
+	if val == "" {
+		return true, nil
+	}
+
+	f, err := parseBool(val)
+	if err != nil {
+		return false, fmt.Errorf("unknown force option: %v", err)
+	}
+	return f, nil
+}
+
+func parseBool(val string) (bool, error) {
+	switch val {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("unknown logical value: " + val)
+	}
+}
+
+func parseCmd() (*cmd, *flag.FlagSet, error) {
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs.Usage = func() {
+		printUsage(fs)
+	}
+	addOutFlag(fs)
+	addForceFlag(fs)
+	addFormatFlag(fs)
+
+	if len(os.Args) < 2 {
+		return nil, fs, fmt.Errorf("no command")
+	}
+
+	name, err := parseCmdName(os.Args[1])
+	if err != nil {
+		return nil, fs, err
+	}
+
+	err = fs.Parse(os.Args[2:])
+	if err != nil {
+		return nil, fs, err
+	}
+
+	cmd, err := parseCmdOptions(name, fs)
+	if err != nil {
+		return nil, fs, err
+	}
+	return cmd, fs, nil
+}
+
+func parseCmdOptions(name cmdName, fs *flag.FlagSet) (*cmd, error) {
+	switch name {
+	case cnLinks:
+		return parseCmdLinks(fs)
+	case cnExport:
+		return parseCmdExport(fs)
+	default:
+		return nil, fmt.Errorf("unknown command: " + string(name))
+	}
+}
+
+func parseCmdLinks(fs *flag.FlagSet) (*cmd, error) {
+	return parseCmdText(cnLinks, fs)
+}
+
+func parseCmdExport(fs *flag.FlagSet) (*cmd, error) {
+	return parseCmdText(cnExport, fs)
+}
+
+func parseCmdText(name cmdName, fs *flag.FlagSet) (*cmd, error) {
+	cmd := &cmd{
+		name: name,
+		args: fs.Args(),
+	}
+	var err error
+
+	fs.Visit(func(f *flag.Flag) {
+		if err != nil {
+			return
+		}
+
+		switch f.Name {
+		case flagOut:
+			cmd.out = flagVal(fs, flagOut)
+		case flagForce:
+			frc, e := parseForce(flagVal(fs, flagForce))
+			if e != nil {
+				err = e
+				return
+			}
+			cmd.force = frc
+		case flagFormat:
+			frm, e := parseFormat(flagVal(fs, flagFormat))
+			if e != nil {
+				err = e
+				return
+			}
+			cmd.format = frm
+		default:
+			err = fmt.Errorf("unexpected option: " + f.Name)
+		}
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return cmd, nil
+}
+
+func addOutFlag(cmd *flag.FlagSet) *string {
+	return cmd.String(flagOut, "", "Output file path. Use the -format option to specify the format.")
+}
+
+func addForceFlag(cmd *flag.FlagSet) *bool {
+	return cmd.Bool(flagForce, false, "Overwrite output file if it already exists.")
+}
+
+func addFormatFlag(cmd *flag.FlagSet) *string {
+	return cmd.String(flagFormat, "xlsx", "Format of the output file. Supported values are: xlsx.")
+}
+
+func flagVal(fs *flag.FlagSet, name string) string {
+	return fs.Lookup(name).Value.String()
+}
 func execCmd(cmd *cmd) error {
 	switch cmd.name {
-		case cnLinks:
-			return execCmdLinks(cmd)
-		case cnExport:
-			return execCmdExport(cmd)
-		default:
-			return fmt.Errorf("unexpected command: " + string(cmd.name))
+	case cnLinks:
+		return execCmdLinks(cmd)
+	case cnExport:
+		return execCmdExport(cmd)
+	default:
+		return fmt.Errorf("unexpected command: " + string(cmd.name))
 	}
 }
 
@@ -85,7 +232,7 @@ func execCmdLinks(cmd *cmd) error {
 
 func openOut(out string, force bool) (io.Writer, func(), error) {
 	if out != "" {
-		flags := os.O_WRONLY|os.O_CREATE
+		flags := os.O_WRONLY | os.O_CREATE
 		if force {
 			flags |= os.O_TRUNC
 		} else {
@@ -291,23 +438,6 @@ func runWithTimeOut(
 	return chromedp.Run(timeoutContext, tasks)
 }
 
-func addOutFlag(cmd *flag.FlagSet) *string {
-	return cmd.String(flagOut, "", "Output file path. Use the -format option to specify the format.")
-}
-
-func addForceFlag(cmd *flag.FlagSet) *bool {
-	return cmd.Bool(flagForce, false, "Overwrite output file if it already exists.")
-}
-
-func addFormatFlag(cmd *flag.FlagSet) *string {
-	return cmd.String(flagFormat, "xlsx", "Format of the output file. Supported values are: xlsx.")
-}
-
-func flagVal(fs *flag.FlagSet, name string) string {
-	return fs.Lookup(name).Value.String()
-}
-
-
 type cmdHelp struct {
 	name    cmdName
 	syntax  string
@@ -316,19 +446,19 @@ type cmdHelp struct {
 }
 
 var cmdHelps = []*cmdHelp{
-		&cmdHelp{
-			name:     cnLinks,
-			syntax:  "fran links [-out <file>] [--force] <search_url>...",
-			desc:    "Collects page links from search results.",
-			example: "fran links -out links-eu.txt \"https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC\"",
-		},
-		&cmdHelp{
-			name:     cnExport,
-			syntax:  "fran export [-format <format>] [-out <file>] [--force] <links_file>...",
-			desc:    "Downloads master data from page links and produces it in the specified format. See the supported formats at the -format option.",
-			example: "fran export -format xlsx -out eu-and-us.xlsx links-eu.txt links-us.txt",
-		},
-	}
+	&cmdHelp{
+		name:    cnLinks,
+		syntax:  "fran links [-out <file>] [--force] <search_url>...",
+		desc:    "Collects page links from search results.",
+		example: "fran links -out links-eu.txt \"https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC\"",
+	},
+	&cmdHelp{
+		name:    cnExport,
+		syntax:  "fran export [-format <format>] [-out <file>] [--force] <links_file>...",
+		desc:    "Downloads master data from page links and produces it in the specified format. See the supported formats at the -format option.",
+		example: "fran export -format xlsx -out eu-and-us.xlsx links-eu.txt links-us.txt",
+	},
+}
 
 func printUsage(fs *flag.FlagSet) {
 	fmt.Println("Usage:")
@@ -348,70 +478,3 @@ func printUsage(fs *flag.FlagSet) {
 	fmt.Println("Options:")
 	fs.PrintDefaults()
 }
-
-type cmd struct {
-    name cmdName
-    args []string
-    out string
-    force bool
-    format format
-}
-
-type cmdName string
-const (
-	cnLinks cmdName = "links"
-	cnExport cmdName = "export"
-)
-
-type format string
-const (
-	fXlsx format = "xlsx"
-	fCsv format = "csv"
-)
-
-func parseCmd(name string, fs *flag.FlagSet) (*cmd, error) {
-	switch name {
-		case string(cnLinks):
-			return parseCmdLinks(fs)
-		case string(cnExport):
-			return parseCmdExport(fs)
-		default:
-			return nil, fmt.Errorf("unknown command: " + name)
-	}
-}
-
-func parseCmdLinks(fs *flag.FlagSet) (*cmd, error) {
-	return parseCmdText(cnLinks, fs)
-}
-
-func parseCmdExport(fs *flag.FlagSet) (*cmd, error) {
-	return parseCmdText(cnExport, fs)
-}
-
-func parseCmdText(name cmdName, fs *flag.FlagSet) (*cmd, error) {
-	cmd := &cmd{
-		name: name,
-		args: fs.Args(),
-	}
-	var err error
-
-	fs.Visit(func(f *flag.Flag){
-		if err != nil {
-			return
-		}
-
-		switch f.Name {
-			default:
-				err = fmt.Errorf("unexpected option: " + f.Name)
-		}
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return cmd, nil
-
-	//out := fs.Lookup(flagOut).Value.String()
-	//force := fs.Lookup(flagForce).Value.String()
-}
-
