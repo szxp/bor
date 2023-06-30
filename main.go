@@ -22,6 +22,7 @@ func main() {
 	cmd, fs, err := parseCmd()
 	if err != nil {
 		fmt.Println(err)
+		fmt.Println()
 		printUsage(fs)
 		os.Exit(1)
 	}
@@ -84,10 +85,6 @@ func parseFormat(val string) (format, error) {
 }
 
 func parseForce(val string) (bool, error) {
-	if val == "" {
-		return true, nil
-	}
-
 	f, err := parseBool(val)
 	if err != nil {
 		return false, fmt.Errorf("unknown force option: %v", err)
@@ -102,7 +99,7 @@ func parseBool(val string) (bool, error) {
 	case "false":
 		return false, nil
 	default:
-		return false, fmt.Errorf("unknown logical value: " + val)
+		return false, fmt.Errorf("unknown value: " + val)
 	}
 }
 
@@ -148,19 +145,52 @@ func parseCmdOptions(name cmdName, fs *flag.FlagSet) (*cmd, error) {
 }
 
 func parseCmdLinks(fs *flag.FlagSet) (*cmd, error) {
-	return parseCmdText(cnLinks, fs)
+	cmd, err := parseCmdText(cnLinks, fs)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cmd.args) == 0 {
+		return nil, fmt.Errorf("no search urls as arguments")
+	}
+
+	return cmd, nil
 }
 
 func parseCmdExport(fs *flag.FlagSet) (*cmd, error) {
-	return parseCmdText(cnExport, fs)
+	cmd, err := parseCmdText(cnExport, fs)
+	if err != nil {
+		return nil, err
+	}
+
+	if cmd.out == "" {
+		return nil, fmt.Errorf("output file must be specified, see -out option")
+	}
+
+	if len(cmd.args) == 0 {
+		return nil, fmt.Errorf("no link files as arguemnts")
+	}
+
+	err = assertExistFiles(cmd.args...)
+	if err != nil {
+		return nil, err
+	}
+
+	err = assertRegularFiles(cmd.args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return cmd, nil
 }
 
 func parseCmdText(name cmdName, fs *flag.FlagSet) (*cmd, error) {
+	var err error
+
 	cmd := &cmd{
 		name: name,
 		args: fs.Args(),
 	}
-	var err error
 
 	fs.Visit(func(f *flag.Flag) {
 		if err != nil {
@@ -169,25 +199,47 @@ func parseCmdText(name cmdName, fs *flag.FlagSet) (*cmd, error) {
 
 		switch f.Name {
 		case flagOut:
-			cmd.out = flagVal(fs, flagOut)
+			cmd.out = f.Value.String()
 		case flagForce:
-			frc, e := parseForce(flagVal(fs, flagForce))
+			frc, e := parseForce(f.Value.String())
 			if e != nil {
 				err = e
 				return
 			}
 			cmd.force = frc
 		case flagFormat:
-			frm, e := parseFormat(flagVal(fs, flagFormat))
+			frm, e := parseFormat(f.Value.String())
 			if e != nil {
 				err = e
 				return
 			}
 			cmd.format = frm
 		default:
-			err = fmt.Errorf("unexpected option: " + f.Name)
+			err = fmt.Errorf("unknown option: " + f.Name)
 		}
 	})
+
+	if cmd.out != "" {
+		exist, err := isExistFile(cmd.out)
+		if err != nil {
+			return nil, err
+		}
+
+		if exist {
+			b, err := isRegularFile(cmd.out)
+			if err != nil {
+				return nil, err
+			}
+			if !b {
+				return nil, fmt.Errorf("not a regular file: %v", cmd.out)
+			}
+
+			if !cmd.force {
+				return nil, fmt.Errorf("file already exists: %v, use the -force option to overwrite it", cmd.out)
+			}
+		}
+
+	}
 
 	if err != nil {
 		return nil, err
@@ -207,9 +259,6 @@ func addFormatFlag(cmd *flag.FlagSet) *string {
 	return cmd.String(flagFormat, "xlsx", "Format of the output file. Supported values are: xlsx.")
 }
 
-func flagVal(fs *flag.FlagSet, name string) string {
-	return fs.Lookup(name).Value.String()
-}
 func execCmd(cmd *cmd) error {
 	switch cmd.name {
 	case cnLinks:
@@ -376,14 +425,6 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 }
 
 func execCmdExport(cmd *cmd) error {
-	files := cmd.args
-	if len(files) == 0 {
-		return fmt.Errorf("no link files")
-	}
-
-	if cmd.out == "" {
-		return fmt.Errorf("output file path must be specified, use the -out option")
-	}
 	w, closeFn, err := openOut(cmd.out, cmd.force)
 	if err != nil {
 		return err
@@ -393,7 +434,7 @@ func execCmdExport(cmd *cmd) error {
 	ctx, cancel := newChromeContext(context.Background())
 	defer cancel()
 
-	for _, p := range files {
+	for _, p := range cmd.args {
 		err := exportLinksFile(ctx, w, p)
 		if err != nil {
 			return err
@@ -448,15 +489,15 @@ type cmdHelp struct {
 var cmdHelps = []*cmdHelp{
 	&cmdHelp{
 		name:    cnLinks,
-		syntax:  "fran links [-out <file>] [--force] <search_url>...",
-		desc:    "Collects page links from search results.",
-		example: "fran links -out links-eu.txt \"https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC\"",
+		syntax:  `fran links [-out=<file>] [--force] <search_url>...`,
+		desc:    `Collects page links from search results.`,
+		example: `fran links -out="links-eu.txt" "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC"`,
 	},
 	&cmdHelp{
 		name:    cnExport,
-		syntax:  "fran export [-format <format>] [-out <file>] [--force] <links_file>...",
-		desc:    "Downloads master data from page links and produces it in the specified format. See the supported formats at the -format option.",
-		example: "fran export -format xlsx -out eu-and-us.xlsx links-eu.txt links-us.txt",
+		syntax:  `fran export [-format=<format>] [-out=<file>] [--force] <links_file>...`,
+		desc:    `Downloads master data from page links and produces it in the specified format. See the supported formats at the -format option.`,
+		example: `fran export -format=xlsx -out="eu-and-us.xlsx" "links-eu.txt" "links-us.txt"`,
 	},
 }
 
@@ -477,4 +518,49 @@ func printUsage(fs *flag.FlagSet) {
 	}
 	fmt.Println("Options:")
 	fs.PrintDefaults()
+}
+
+func assertRegularFiles(ps ...string) error {
+	for _, p := range ps {
+		b, err := isRegularFile(p)
+		if err != nil {
+			return err
+		}
+		if !b {
+			return fmt.Errorf("not a regular file: %v", p)
+		}
+	}
+	return nil
+}
+
+func isRegularFile(p string) (bool, error) {
+	fi, err := os.Stat(p)
+	if err != nil {
+		return false, err
+	}
+	return fi.Mode().IsRegular(), nil
+}
+
+func assertExistFiles(ps ...string) error {
+	for _, p := range ps {
+		b, err := isExistFile(p)
+		if err != nil {
+			return err
+		}
+		if !b {
+			return fmt.Errorf("file not exist: %v", p)
+		}
+	}
+	return nil
+}
+
+func isExistFile(p string) (bool, error) {
+	_, err := os.Stat(p)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
