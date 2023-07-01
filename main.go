@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"strings"
@@ -49,7 +50,7 @@ type cmd struct {
 }
 
 const (
-	cnLinks  cmdName = "links"
+	cnLinks  cmdName = "urls"
 	cnExport cmdName = "export"
 )
 
@@ -391,10 +392,9 @@ func getLinks(w io.Writer, urls []string) error {
 }
 
 func getLinksRel(ctx context.Context) ([]string, error) {
-	links := make(map[string]struct{}, 100)
+	urls := make(map[string]struct{}, 100)
 	for {
 		attrs := make([]map[string]string, 0, 100)
-		nodes := make([]*cdp.Node, 0, 100)
 
 		err := chromedp.Run(ctx, chromedp.Tasks{
 			chromedp.AttributesAll(
@@ -411,9 +411,10 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			links[rel.String()] = struct{}{}
+			urls[rel.String()] = struct{}{}
 		}
 
+		nodes := make([]*cdp.Node, 0, 100)
 		err = runWithTimeOut(
 			ctx,
 			3*time.Second,
@@ -448,8 +449,8 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 		}
 	}
 
-	res := make([]string, 0, len(links))
-	for k, _ := range links {
+	res := make([]string, 0, len(urls))
+	for k, _ := range urls {
 		res = append(res, k)
 	}
 
@@ -467,7 +468,7 @@ func execCmdExport(cmd *cmd) error {
 	defer cancel()
 
 	for _, p := range cmd.args {
-		err := exportLinksFile(ctx, w, p)
+		err := exportFile(ctx, w, p)
 		if err != nil {
 			return err
 		}
@@ -476,24 +477,128 @@ func execCmdExport(cmd *cmd) error {
 	return nil
 }
 
-func exportLinksFile(ctx context.Context, w io.Writer, p string) error {
+func exportFile(ctx context.Context, w io.Writer, p string) error {
 	f, err := os.Open(p)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return exportLinksReader(ctx, w, f)
+	return exportReader(ctx, w, f)
 }
 
-func exportLinksReader(ctx context.Context, w io.Writer, r io.Reader) error {
+func exportReader(ctx context.Context, w io.Writer, r io.Reader) error {
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
-		l := strings.TrimSpace(sc.Text())
-		fmt.Println(l)
+		u := strings.TrimSpace(sc.Text())
+		if sc.Err() != nil {
+			break
+		}
+
+		err := exportUrl(ctx, w, u)
+		if err != nil {
+			return err
+		}
 	}
 	if err := sc.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 	}
+
+	return nil
+}
+
+type sec struct {
+	URL    string            `json:"url"`
+	ISIN   string            `json:"isin"`
+	Symbol string            `json:"symbol"`
+	Type   string            `json:"type"`
+	Name   string            `json:"name"`
+	Master map[string]string `json:"master"`
+}
+
+func exportUrl(ctx context.Context, w io.Writer, u string) error {
+	//fmt.Println(u)
+
+	sec := &sec{
+		URL:    u,
+		Master: make(map[string]string),
+	}
+
+	nameNodes := make([]*cdp.Node, 0, 1)
+	isinNodes := make([]*cdp.Node, 0, 1)
+	symNodes := make([]*cdp.Node, 0, 1)
+	typNodes := make([]*cdp.Node, 0, 1)
+	labNodes := make([]*cdp.Node, 0, 100)
+	valNodes := make([]*cdp.Node, 0, 100)
+
+	err := chromedp.Run(ctx, chromedp.Tasks{
+		chromedp.Navigate(u),
+		// wait for data to appear
+		chromedp.WaitVisible(
+			`//app-widget-performance//div[contains(@class, 'table-responsive')] `,
+			chromedp.BySearch),
+		chromedp.Nodes(
+			`//h1[contains(@class, 'instrument-name')]//text()`,
+			&nameNodes,
+			chromedp.BySearch),
+		chromedp.Nodes(
+			`//span[contains(text(), 'ISIN:')]//text()`,
+			&isinNodes,
+			chromedp.BySearch),
+		chromedp.Nodes(
+			`//span[contains(text(), 'Symbol:')]//text()`,
+			&symNodes,
+			chromedp.BySearch),
+		chromedp.Nodes(
+			`//span[contains(text(), 'Type:')]//text()`,
+			&typNodes,
+			chromedp.BySearch),
+		chromedp.Nodes(
+			`//app-widget-equity-master-data//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//text()`,
+			&labNodes,
+			chromedp.BySearch),
+		chromedp.Nodes(
+			`//app-widget-equity-master-data//div[contains(@class, 'table-responsive')]//tbody//tr//td[2]//text()`,
+			&valNodes,
+			chromedp.BySearch),
+	})
+	if err != nil {
+		return err
+	}
+
+	sec.Name = strings.TrimSpace(nameNodes[0].NodeValue)
+
+	isin := strings.TrimSpace(isinNodes[0].NodeValue)
+	isin = strings.TrimPrefix(isin, "ISIN:")
+	isin = strings.TrimSpace(isin)
+	sec.ISIN = isin
+
+	sym := strings.TrimSpace(symNodes[0].NodeValue)
+	sym = strings.TrimPrefix(sym, "|")
+	sym = strings.TrimSpace(sym)
+	sym = strings.TrimPrefix(sym, "Symbol:")
+	sym = strings.TrimSpace(sym)
+	sec.Symbol = sym
+
+	typ := strings.TrimSpace(typNodes[0].NodeValue)
+	typ = strings.TrimPrefix(typ, "|")
+	typ = strings.TrimSpace(typ)
+	typ = strings.TrimPrefix(typ, "Type:")
+	typ = strings.TrimSpace(typ)
+	sec.Type = typ
+
+	for i := 0; i < len(labNodes); i++ {
+		lab := strings.TrimSpace(labNodes[i].NodeValue)
+		lab = strings.ToLower(lab)
+		val := strings.TrimSpace(valNodes[i].NodeValue)
+		sec.Master[lab] = val
+	}
+
+	b, err := json.MarshalIndent(&sec, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(b))
 
 	return nil
 }
@@ -521,15 +626,15 @@ type cmdHelp struct {
 var cmdHelps = []*cmdHelp{
 	&cmdHelp{
 		name:    cnLinks,
-		syntax:  `fran links [-out=<file>] [--force] <search_url>...`,
-		desc:    `Collects page links from search results.`,
-		example: `fran links -out="links-eu.txt" "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC"`,
+		syntax:  `fran urls [-out=<file>] [--force] <search_url>...`,
+		desc:    `Collects page urls from search results.`,
+		example: `fran urls -out="urls-eu.txt" "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC"`,
 	},
 	&cmdHelp{
 		name:    cnExport,
-		syntax:  `fran export [-format=<format>] [-out=<file>] [--force] <links_file>...`,
-		desc:    `Downloads master data from page links and produces it in the specified format. See the supported formats at the -format option.`,
-		example: `fran export -format=xlsx -out="eu-and-us.xlsx" "links-eu.txt" "links-us.txt"`,
+		syntax:  `fran export [-format=<format>] [-out=<file>] [--force] <urls_file>...`,
+		desc:    `Downloads master data from page urls and produces it in the specified format. See the supported formats at the -format option.`,
+		example: `fran export -format=xlsx -out="eu-and-us.xlsx" "urls-eu.txt" "urls-us.txt"`,
 	},
 }
 
