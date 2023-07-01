@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	//"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
@@ -458,17 +459,32 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 }
 
 func execCmdExport(cmd *cmd) error {
-	w, closeFn, err := openOut(cmd.out, cmd.force)
+	//w, closeFn, err := openOut(cmd.out, cmd.force)
+	//if err != nil {
+	//	return err
+	//}
+	//defer closeFn()
+
+	dir := "frandb"
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return err
 	}
-	defer closeFn()
 
+	err = downloadFiles(dir, cmd.args)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func downloadFiles(dir string, files []string) error {
 	ctx, cancel := newChromeContext(context.Background())
 	defer cancel()
 
-	for _, p := range cmd.args {
-		err := exportFile(ctx, w, p)
+	for _, p := range files {
+		err := downloadFile(ctx, dir, p)
 		if err != nil {
 			return err
 		}
@@ -477,16 +493,16 @@ func execCmdExport(cmd *cmd) error {
 	return nil
 }
 
-func exportFile(ctx context.Context, w io.Writer, p string) error {
+func downloadFile(ctx context.Context, dir string, p string) error {
 	f, err := os.Open(p)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return exportReader(ctx, w, f)
+	return downloadReader(ctx, dir, f)
 }
 
-func exportReader(ctx context.Context, w io.Writer, r io.Reader) error {
+func downloadReader(ctx context.Context, dir string, r io.Reader) error {
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
 		u := strings.TrimSpace(sc.Text())
@@ -494,7 +510,7 @@ func exportReader(ctx context.Context, w io.Writer, r io.Reader) error {
 			break
 		}
 
-		err := exportUrl(ctx, w, u)
+		err := downloadUrl(ctx, dir, u)
 		if err != nil {
 			return err
 		}
@@ -515,8 +531,18 @@ type sec struct {
 	Master map[string]string `json:"master"`
 }
 
-func exportUrl(ctx context.Context, w io.Writer, u string) error {
-	//fmt.Println(u)
+func downloadUrl(ctx context.Context, dir string, u string) error {
+	bname := path.Base(u)
+	p := filepath.Join(dir, bname+".json")
+	fmt.Println(p)
+
+	exists, err := isExistFile(p)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
 
 	sec := &sec{
 		URL:    u,
@@ -530,7 +556,7 @@ func exportUrl(ctx context.Context, w io.Writer, u string) error {
 	labNodes := make([]*cdp.Node, 0, 100)
 	valNodes := make([]*cdp.Node, 0, 100)
 
-	err := chromedp.Run(ctx, chromedp.Tasks{
+	err = chromedp.Run(ctx, chromedp.Tasks{
 		chromedp.Navigate(u),
 		// wait for data to appear
 		chromedp.WaitVisible(
@@ -598,7 +624,10 @@ func exportUrl(ctx context.Context, w io.Writer, u string) error {
 		return err
 	}
 
-	fmt.Println(string(b))
+	err = os.WriteFile(p, b, 0755)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
