@@ -235,7 +235,9 @@ func parseCmdText(name cmdName, fs *flag.FlagSet) (*cmd, error) {
 			}
 
 			if !cmd.force {
-				return nil, fmt.Errorf("file already exists: %v, use the -force option to overwrite it", cmd.out)
+				return nil, fmt.Errorf(
+					"file already exists: %v, use the -force option to overwrite it",
+					cmd.out)
 			}
 		}
 
@@ -248,15 +250,24 @@ func parseCmdText(name cmdName, fs *flag.FlagSet) (*cmd, error) {
 }
 
 func addOutFlag(cmd *flag.FlagSet) *string {
-	return cmd.String(flagOut, "", "Output file path. Use the -format option to specify the format.")
+	return cmd.String(
+		flagOut,
+		"",
+		"Output file path. Use the -format option to specify the format.")
 }
 
 func addForceFlag(cmd *flag.FlagSet) *bool {
-	return cmd.Bool(flagForce, false, "Overwrite output file if it already exists.")
+	return cmd.Bool(
+		flagForce,
+		false,
+		"Overwrite output file if it already exists.")
 }
 
 func addFormatFlag(cmd *flag.FlagSet) *string {
-	return cmd.String(flagFormat, "xlsx", "Format of the output file. Supported values are: xlsx.")
+	return cmd.String(
+		flagFormat,
+		"xlsx",
+		"Format of the output file. Supported values are: xlsx.")
 }
 
 func execCmd(cmd *cmd) error {
@@ -332,11 +343,21 @@ func getLinks(w io.Writer, urls []string) error {
 	for _, u := range urls {
 		err := chromedp.Run(ctx, chromedp.Tasks{
 			chromedp.Navigate(u),
-			chromedp.WaitVisible(`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`, chromedp.BySearch),
-			chromedp.WaitNotPresent(`//app-loading-spinner`, chromedp.BySearch),
-			chromedp.Click(`//app-page-bar//button[contains(text(), '100')]`, chromedp.BySearch),
-			chromedp.WaitVisible(`//app-loading-spinner`, chromedp.BySearch),
-			chromedp.WaitNotPresent(`//app-loading-spinner`, chromedp.BySearch),
+			chromedp.WaitVisible(
+				`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`,
+				chromedp.BySearch),
+			chromedp.WaitNotPresent(
+				`//app-loading-spinner`,
+				chromedp.BySearch),
+			chromedp.Click(
+				`//app-page-bar//button[contains(text(), '100')]`,
+				chromedp.BySearch),
+			chromedp.WaitVisible(
+				`//app-loading-spinner`,
+				chromedp.BySearch),
+			chromedp.WaitNotPresent(
+				`//app-loading-spinner`,
+				chromedp.BySearch),
 		})
 		if err != nil {
 			return err
@@ -376,7 +397,10 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 		nodes := make([]*cdp.Node, 0, 100)
 
 		err := chromedp.Run(ctx, chromedp.Tasks{
-			chromedp.AttributesAll(`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`, &attrs, chromedp.BySearch),
+			chromedp.AttributesAll(
+				`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`,
+				&attrs,
+				chromedp.BySearch),
 		})
 		if err != nil {
 			return nil, err
@@ -394,7 +418,10 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 			ctx,
 			3*time.Second,
 			chromedp.Tasks{
-				chromedp.Nodes(`//app-page-bar[1]//button[contains(@class, 'active') and contains(@class,'page-bar-type-button-width-auto')]/following-sibling::button[contains(@class, 'page-bar-type-button-width-auto')]`, &nodes, chromedp.BySearch),
+				chromedp.Nodes(
+					`//app-page-bar[1]//button[contains(@class, 'active') and contains(@class,'page-bar-type-button-width-auto')]/following-sibling::button[contains(@class, 'page-bar-type-button-width-auto')]`,
+					&nodes,
+					chromedp.BySearch),
 			},
 		)
 		if err != nil && err != context.DeadlineExceeded {
@@ -407,9 +434,14 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 		}
 
 		err = chromedp.Run(ctx, chromedp.Tasks{
-			chromedp.Click(`//app-page-bar[1]//button[contains(@class, 'active') and contains(@class,'page-bar-type-button-width-auto')]/following-sibling::button[contains(@class, 'page-bar-type-button-width-auto')][1]`, chromedp.BySearch),
-			chromedp.WaitVisible(`//app-loading-spinner`, chromedp.BySearch),
-			chromedp.WaitNotPresent(`//app-loading-spinner`, chromedp.BySearch),
+			chromedp.Click(
+				`//app-page-bar[1]//button[contains(@class, 'active') and contains(@class,'page-bar-type-button-width-auto')]/following-sibling::button[contains(@class, 'page-bar-type-button-width-auto')][1]`,
+				chromedp.BySearch),
+			chromedp.WaitVisible(
+				`//app-loading-spinner`,
+				chromedp.BySearch),
+			chromedp.WaitNotPresent(`//app-loading-spinner`,
+				chromedp.BySearch),
 		})
 		if err != nil {
 			return nil, err
