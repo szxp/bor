@@ -657,7 +657,7 @@ var cmdHelps = []*cmdHelp{
 		name:    cnLinks,
 		syntax:  `fran urls [-out=<file>] [--force] <search_url>...`,
 		desc:    `Collects page urls from search results.`,
-		example: `fran urls -out="urls-eu.txt" "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&ORDER_BY=NAME&ORDER_DIRECTION=ASC"`,
+		example: `fran urls -out="urls-eu.txt" "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&MARKET=REGULATED&ORDER_BY=TURNOVER&ORDER_DIRECTION=DESC"`,
 	},
 	&cmdHelp{
 		name:    cnExport,
