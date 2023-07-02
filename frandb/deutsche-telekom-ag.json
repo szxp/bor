@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/deutsche-telekom-ag",
+  "isin": "DE0005557508",
+  "symbol": "DTE",
+  "type": "Equity",
+  "name": "Deutsche Telekom AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Telecommunication Services",
+    "market": "Regulated Market",
+    "sector": "Telecommunication",
+    "segment": "Prime Standard",
+    "subsector": "Fixed-Line Telecommunication",
+    "type": "Common shares"
+  }
+}

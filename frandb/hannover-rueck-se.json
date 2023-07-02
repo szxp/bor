@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/hannover-rueck-se",
+  "isin": "DE0008402215",
+  "symbol": "HNR1",
+  "type": "Equity",
+  "name": "Hannover Rück SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Bank/insurance",
+    "market": "Regulated Market",
+    "sector": "Insurance",
+    "segment": "Prime Standard",
+    "subsector": "Re-Insurance",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/gesco-ag",
+  "isin": "DE000A1K0201",
+  "symbol": "GSC1",
+  "type": "Equity",
+  "name": "Gesco SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Industrial",
+    "segment": "Prime Standard",
+    "subsector": "Industrial, Diversified",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/deutsche-lufthansa-ag",
+  "isin": "DE0008232125",
+  "symbol": "LHA",
+  "type": "Equity",
+  "name": "Deutsche Lufthansa AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Traffic",
+    "market": "Regulated Market",
+    "sector": "Transportation \u0026 Logistics",
+    "segment": "Prime Standard",
+    "subsector": "Airlines",
+    "type": "Common shares"
+  }
+}

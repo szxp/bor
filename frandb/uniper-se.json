@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/uniper-se",
+  "isin": "DE000UNSE018",
+  "symbol": "UN01",
+  "type": "Equity",
+  "name": "Uniper SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Service/energy",
+    "market": "Regulated Market",
+    "sector": "Utilities",
+    "segment": "Prime Standard",
+    "subsector": "Multi-Utilities",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/mutares-se-co-kgaa",
+  "isin": "DE000A2NB650",
+  "symbol": "MUX",
+  "type": "Equity",
+  "name": "Mutares SE \u0026 Co. KGaA",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Other german shares",
+    "market": "Regulated Market",
+    "sector": "Financial Services",
+    "segment": "Prime Standard",
+    "subsector": "Private Equity \u0026 Venture Capital",
+    "type": "Common shares"
+  }
+}

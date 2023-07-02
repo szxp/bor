@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/siemens-healthineers-ag",
+  "isin": "DE000SHL1006",
+  "symbol": "SHL",
+  "type": "Equity",
+  "name": "Siemens Healthineers AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Pharma \u0026 Healthcare",
+    "segment": "Prime Standard",
+    "subsector": "Medical Technology",
+    "type": "Common shares"
+  }
+}

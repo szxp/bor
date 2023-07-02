@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/de000a0jbpg2-pne-ag",
+  "isin": "DE000A0JBPG2",
+  "symbol": "PNE3",
+  "type": "Equity",
+  "name": "PNE AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Other german shares",
+    "market": "Regulated Market",
+    "sector": "Industrial",
+    "segment": "Prime Standard",
+    "subsector": "Renewable Energies",
+    "type": "Common shares"
+  }
+}

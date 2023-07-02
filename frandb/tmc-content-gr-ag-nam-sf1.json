@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/tmc-content-gr-ag-nam-sf1",
+  "isin": "CH0557519201",
+  "symbol": "ERO",
+  "type": "Equity",
+  "name": "TMC CONTENT GR.AG NAM.SF1",
+  "master": {
+    "country": "Switzerland",
+    "form": "Registered share",
+    "industry": "Foreign shares",
+    "market": "Regulated Market",
+    "sector": "Media",
+    "segment": "General Standard",
+    "subsector": "Movies \u0026 Entertainment",
+    "type": "Common shares"
+  }
+}

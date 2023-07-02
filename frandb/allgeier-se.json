@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/allgeier-se",
+  "isin": "DE000A2GS633",
+  "symbol": "AEIN",
+  "type": "Equity",
+  "name": "Allgeier SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Software",
+    "segment": "General Standard",
+    "subsector": "IT-Services",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/allterco-jsco",
+  "isin": "BG1100003166",
+  "symbol": "A4L",
+  "type": "Equity",
+  "name": "Allterco JSCo",
+  "master": {
+    "country": "Bulgaria",
+    "form": "Registered share",
+    "industry": "Telecommunication Services",
+    "market": "Regulated Market",
+    "sector": "Technology",
+    "segment": "Prime Standard",
+    "subsector": "Communications Technology",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/psi-aktiengesellschaft",
+  "isin": "DE000A0Z1JH9",
+  "symbol": "PSAN",
+  "type": "Equity",
+  "name": "PSI Aktiengesellschaft",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Software",
+    "market": "Regulated Market",
+    "sector": "Software",
+    "segment": "Prime Standard",
+    "subsector": "Software",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/mtu-aero-engines-ag",
+  "isin": "DE000A0D9PT0",
+  "symbol": "MTX",
+  "type": "Equity",
+  "name": "MTU Aero Engines AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Other german shares",
+    "market": "Regulated Market",
+    "sector": "Industrial",
+    "segment": "Prime Standard",
+    "subsector": "Heavy Machinery",
+    "type": "Common shares"
+  }
+}

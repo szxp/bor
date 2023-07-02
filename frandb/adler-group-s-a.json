@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/adler-group-s-a",
+  "isin": "LU1250154413",
+  "symbol": "ADJ",
+  "type": "Equity",
+  "name": "ADLER Group S.A.",
+  "master": {
+    "country": "Luxembourg",
+    "form": "Registered share",
+    "industry": "Construction/ construction materials",
+    "market": "Regulated Market",
+    "sector": "Financial Services",
+    "segment": "Prime Standard",
+    "subsector": "Real Estate",
+    "type": "Common shares"
+  }
+}

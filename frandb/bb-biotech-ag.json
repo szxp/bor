@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/bb-biotech-ag",
+  "isin": "CH0038389992",
+  "symbol": "BBZA",
+  "type": "Equity",
+  "name": "BB Biotech AG",
+  "master": {
+    "country": "Switzerland",
+    "form": "Registered share",
+    "industry": "Foreign shares",
+    "market": "Regulated Market",
+    "sector": "Pharma \u0026 Healthcare",
+    "segment": "Prime Standard",
+    "subsector": "Biotechnology",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/fuchs-petrolub-na-st-o-n",
+  "isin": "DE000A3E5D56",
+  "symbol": "FPE",
+  "type": "Equity",
+  "name": "Fuchs Petrolub SE ordinary share",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Chemicals",
+    "segment": "Prime Standard",
+    "subsector": "Chemicals, Specialty",
+    "type": "Common shares"
+  }
+}

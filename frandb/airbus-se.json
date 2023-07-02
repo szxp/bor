@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/airbus-se",
+  "isin": "NL0000235190",
+  "symbol": "AIR",
+  "type": "Equity",
+  "name": "Airbus SE",
+  "master": {
+    "country": "Netherlands",
+    "form": "Registered share",
+    "industry": "Automotive and mechanical engineering",
+    "market": "Regulated Market",
+    "sector": "Industrial",
+    "segment": "Prime Standard",
+    "subsector": "Heavy Machinery",
+    "type": "Common shares"
+  }
+}

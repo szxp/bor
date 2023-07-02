@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/haier-smart-home-co-ltd",
+  "isin": "CNE1000031C1",
+  "symbol": "690D",
+  "type": "Equity",
+  "name": "HAIER SMART HOME CO., Ltd.",
+  "master": {
+    "country": "China",
+    "form": "Registered share",
+    "industry": "Foreign shares",
+    "market": "Regulated Market",
+    "sector": "Consumer",
+    "segment": "Prime Standard",
+    "subsector": "Household Appliances \u0026 Housewares",
+    "type": "Common shares"
+  }
+}

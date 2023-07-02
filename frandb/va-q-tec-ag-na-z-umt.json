@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/va-q-tec-ag-na-z-umt",
+  "isin": "DE000A32VPJ3",
+  "symbol": "VQT0",
+  "type": "Equity",
+  "name": "VA-Q-TEC AG NA Z.UMT.",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Other german shares",
+    "market": "Regulated Market",
+    "sector": "",
+    "segment": "Prime Standard",
+    "subsector": "",
+    "type": "Common shares"
+  }
+}

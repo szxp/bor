@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/technotrans-se",
+  "isin": "DE000A0XYGA7",
+  "symbol": "TTR1",
+  "type": "Equity",
+  "name": "technotrans SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Automotive and mechanical engineering",
+    "market": "Regulated Market",
+    "sector": "Industrial",
+    "segment": "Prime Standard",
+    "subsector": "Advanced Industrial Equipment",
+    "type": "Common shares"
+  }
+}

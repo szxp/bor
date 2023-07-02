@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/hypoport-se",
+  "isin": "DE0005493365",
+  "symbol": "HYQ",
+  "type": "Equity",
+  "name": "Hypoport SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Other german shares",
+    "market": "Regulated Market",
+    "sector": "Financial Services",
+    "segment": "Prime Standard",
+    "subsector": "Diversified Financial",
+    "type": "Common shares"
+  }
+}

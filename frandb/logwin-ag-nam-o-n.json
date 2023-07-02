@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/logwin-ag-nam-o-n",
+  "isin": "LU1618151879",
+  "symbol": "TGHN",
+  "type": "Equity",
+  "name": "LOGWIN AG NAM. O.N.",
+  "master": {
+    "country": "Luxembourg",
+    "form": "Registered share",
+    "industry": "Foreign shares",
+    "market": "Regulated Market",
+    "sector": "Transportation \u0026 Logistics",
+    "segment": "Prime Standard",
+    "subsector": "Logistics",
+    "type": "Common shares"
+  }
+}

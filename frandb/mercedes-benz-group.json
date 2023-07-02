@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/mercedes-benz-group",
+  "isin": "DE0007100000",
+  "symbol": "MBG",
+  "type": "Equity",
+  "name": "Mercedes Benz Group AG (former Daimler)",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Automotive and mechanical engineering",
+    "market": "Regulated Market",
+    "sector": "Automobile",
+    "segment": "Prime Standard",
+    "subsector": "Automobile Manufacturers",
+    "type": "Common shares"
+  }
+}

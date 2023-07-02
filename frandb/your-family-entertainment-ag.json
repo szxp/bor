@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/your-family-entertainment-ag",
+  "isin": "DE000A161N14",
+  "symbol": "RTV",
+  "type": "Equity",
+  "name": "Your Family Entertainment AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Media",
+    "segment": "General Standard",
+    "subsector": "Movies \u0026 Entertainment",
+    "type": "Common shares"
+  }
+}

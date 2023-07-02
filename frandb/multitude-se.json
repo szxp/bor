@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/multitude-se",
+  "isin": "FI4000106299",
+  "symbol": "FRU",
+  "type": "Equity",
+  "name": "Multitude SE",
+  "master": {
+    "country": "Finland",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Financial Services",
+    "segment": "Prime Standard",
+    "subsector": "Diversified Financial",
+    "type": "Common shares"
+  }
+}

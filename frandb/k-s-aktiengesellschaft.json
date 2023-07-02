@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/k-s-aktiengesellschaft",
+  "isin": "DE000KSAG888",
+  "symbol": "SDF",
+  "type": "Equity",
+  "name": "K+S Aktiengesellschaft",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Potash, oil, natural gas, carbon",
+    "market": "Regulated Market",
+    "sector": "Chemicals",
+    "segment": "Prime Standard",
+    "subsector": "Chemicals, Commodity",
+    "type": "Common shares"
+  }
+}

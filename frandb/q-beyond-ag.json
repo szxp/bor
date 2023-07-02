@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/q-beyond-ag",
+  "isin": "DE0005137004",
+  "symbol": "QBY",
+  "type": "Equity",
+  "name": "q.beyond AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Software",
+    "market": "Regulated Market",
+    "sector": "Technology",
+    "segment": "Prime Standard",
+    "subsector": "Communications Technology",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/wacker-neuson-se",
+  "isin": "DE000WACK012",
+  "symbol": "WAC",
+  "type": "Equity",
+  "name": "Wacker Neuson SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Industrial",
+    "segment": "Prime Standard",
+    "subsector": "Industrial Machinery",
+    "type": "Common shares"
+  }
+}

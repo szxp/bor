@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/bayer-ag",
+  "isin": "DE000BAY0017",
+  "symbol": "BAYN",
+  "type": "Equity",
+  "name": "Bayer AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Chemicals",
+    "segment": "Prime Standard",
+    "subsector": "Chemicals, Specialty",
+    "type": "Common shares"
+  }
+}

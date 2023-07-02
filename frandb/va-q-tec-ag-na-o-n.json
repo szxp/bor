@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/va-q-tec-ag-na-o-n",
+  "isin": "DE0006636681",
+  "symbol": "VQT",
+  "type": "Equity",
+  "name": "VA-Q-TEC AG NA O.N.",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Other german shares",
+    "market": "Regulated Market",
+    "sector": "Industrial",
+    "segment": "Prime Standard",
+    "subsector": "Containers \u0026 Packaging",
+    "type": "Common shares"
+  }
+}

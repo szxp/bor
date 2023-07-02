@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/adtran-holdings-inc",
+  "isin": "US00486H1059",
+  "symbol": "QH9",
+  "type": "Equity",
+  "name": "ADTRAN HOLDINGS INC.",
+  "master": {
+    "country": "USA",
+    "form": "Registered share",
+    "industry": "Foreign shares",
+    "market": "Regulated Market",
+    "sector": "Technology",
+    "segment": "Prime Standard",
+    "subsector": "Communications Technology",
+    "type": "Common shares"
+  }
+}

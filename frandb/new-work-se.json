@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/new-work-se",
+  "isin": "DE000NWRK013",
+  "symbol": "NWO",
+  "type": "Equity",
+  "name": "NEW WORK SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Internet Service Provider",
+    "market": "Regulated Market",
+    "sector": "Software",
+    "segment": "Prime Standard",
+    "subsector": "Internet",
+    "type": "Common shares"
+  }
+}

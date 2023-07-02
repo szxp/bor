@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/vita-34-ag",
+  "isin": "DE000A0BL849",
+  "symbol": "V3V",
+  "type": "Equity",
+  "name": "VITA 34 AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Other german shares",
+    "market": "Regulated Market",
+    "sector": "Pharma \u0026 Healthcare",
+    "segment": "Prime Standard",
+    "subsector": "Healthcare",
+    "type": "Common shares"
+  }
+}

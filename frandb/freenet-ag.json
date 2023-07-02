@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/freenet-ag",
+  "isin": "DE000A0Z2ZZ5",
+  "symbol": "FNTN",
+  "type": "Equity",
+  "name": "freenet AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Telecommunication Services",
+    "market": "Regulated Market",
+    "sector": "Telecommunication",
+    "segment": "Prime Standard",
+    "subsector": "Wireless Communication",
+    "type": "Common shares"
+  }
+}

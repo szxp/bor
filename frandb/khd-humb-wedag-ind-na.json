@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/khd-humb-wedag-ind-na",
+  "isin": "DE000A1X3WW8",
+  "symbol": "HETA",
+  "type": "Equity",
+  "name": "KHD HUMB.WEDAG IND. NA",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Automotive and mechanical engineering",
+    "market": "Regulated Market",
+    "sector": "Basic Resources",
+    "segment": "General Standard",
+    "subsector": "Forest \u0026 Paper Products",
+    "type": "Common shares"
+  }
+}

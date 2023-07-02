@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/iq-intl-ag-sf-01",
+  "isin": "CH0451424300",
+  "symbol": "IQL",
+  "type": "Equity",
+  "name": "iQ International AG",
+  "master": {
+    "country": "Switzerland",
+    "form": "Registered share",
+    "industry": "Foreign shares",
+    "market": "Regulated Market",
+    "sector": "Automobile",
+    "segment": "General Standard",
+    "subsector": "Auto Parts \u0026 Equipment",
+    "type": "Common shares"
+  }
+}

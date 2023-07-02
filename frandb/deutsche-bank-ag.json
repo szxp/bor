@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/deutsche-bank-ag",
+  "isin": "DE0005140008",
+  "symbol": "DBK",
+  "type": "Equity",
+  "name": "Deutsche Bank AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Bank/insurance",
+    "market": "Regulated Market",
+    "sector": "Banks",
+    "segment": "Prime Standard",
+    "subsector": "Credit Banks",
+    "type": "Common shares"
+  }
+}

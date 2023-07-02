@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/kps-ag",
+  "isin": "DE000A1A6V48",
+  "symbol": "KSC",
+  "type": "Equity",
+  "name": "KPS AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Software",
+    "market": "Regulated Market",
+    "sector": "Software",
+    "segment": "Prime Standard",
+    "subsector": "IT-Services",
+    "type": "Common shares"
+  }
+}

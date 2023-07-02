@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/iq-international-ag",
+  "isin": "CH0563815429",
+  "symbol": "IQL1",
+  "type": "Equity",
+  "name": "IQ INTERNATIONAL AG",
+  "master": {
+    "country": "Switzerland",
+    "form": "Registered share",
+    "industry": "Foreign shares",
+    "market": "Regulated Market",
+    "sector": "",
+    "segment": "General Standard",
+    "subsector": "",
+    "type": "Common shares"
+  }
+}

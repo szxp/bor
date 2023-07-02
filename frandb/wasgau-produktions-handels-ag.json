@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/wasgau-produktions-handels-ag",
+  "isin": "DE0007016008",
+  "symbol": "MSH",
+  "type": "Equity",
+  "name": "WASGAU Produktions \u0026 Handels AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Trade",
+    "market": "Regulated Market",
+    "sector": "Food \u0026 Beverages",
+    "segment": "General Standard",
+    "subsector": "Food",
+    "type": "Common shares"
+  }
+}

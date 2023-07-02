@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/vonovia-se",
+  "isin": "DE000A1ML7J1",
+  "symbol": "VNA",
+  "type": "Equity",
+  "name": "Vonovia SE",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Financial Services",
+    "segment": "Prime Standard",
+    "subsector": "Real Estate",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/medigene-na-o-n-konv",
+  "isin": "DE000A1X3W00",
+  "symbol": "MDG1",
+  "type": "Equity",
+  "name": "MEDIGENE NA O.N. KONV.",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Other german shares",
+    "market": "Regulated Market",
+    "sector": "Pharma \u0026 Healthcare",
+    "segment": "Prime Standard",
+    "subsector": "Biotechnology",
+    "type": "Common shares"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "url": "https:/www.boerse-frankfurt.de/equity/pferdewetten-de-ag",
+  "isin": "DE000A2YN777",
+  "symbol": "EMH",
+  "type": "Equity",
+  "name": "pferdewetten.de AG",
+  "master": {
+    "country": "Germany",
+    "form": "Registered share",
+    "industry": "Holding companies",
+    "market": "Regulated Market",
+    "sector": "Consumer",
+    "segment": "General Standard",
+    "subsector": "Leisure",
+    "type": "Common shares"
+  }
+}
