@@ -21,7 +21,9 @@ import (
 )
 
 func main() {
-	cmd, fs, err := parseCmd()
+	env := &env{}
+
+	fs, err := parseCmd(env)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println()
@@ -29,33 +31,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = execCmd(cmd)
+	err = env.execCmd()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-const (
-	flagOut    = "out"
-	flagForce  = "force"
-	flagFormat = "format"
-)
-
-type cmd struct {
-	name   cmdName
-	args   []string
-	out    string
-	force  bool
-	format format
+type env struct {
+	cmd      cmdName
+	args     []string
+	out      string
+	force    bool
+	format   format
+	database string
 }
+
+type cmdName string
 
 const (
 	cnLinks  cmdName = "urls"
 	cnExport cmdName = "export"
 )
-
-type cmdName string
 
 func parseCmdName(name string) (cmdName, error) {
 	switch name {
@@ -68,12 +65,12 @@ func parseCmdName(name string) (cmdName, error) {
 	}
 }
 
+type format string
+
 const (
 	fXlsx format = "xlsx"
 	fCsv  format = "csv"
 )
-
-type format string
 
 func parseFormat(val string) (format, error) {
 	switch val {
@@ -105,7 +102,7 @@ func parseBool(val string) (bool, error) {
 	}
 }
 
-func parseCmd() (*cmd, *flag.FlagSet, error) {
+func parseCmd(env *env) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	fs.Usage = func() {
 		printUsage(fs)
@@ -113,183 +110,189 @@ func parseCmd() (*cmd, *flag.FlagSet, error) {
 	addOutFlag(fs)
 	addForceFlag(fs)
 	addFormatFlag(fs)
+	addDatabaseFlag(fs)
 
 	if len(os.Args) < 2 {
-		return nil, fs, fmt.Errorf("no command")
+		return fs, fmt.Errorf("no command")
 	}
 
-	name, err := parseCmdName(os.Args[1])
+	cmdName, err := parseCmdName(os.Args[1])
 	if err != nil {
-		return nil, fs, err
+		return fs, err
 	}
+	env.cmd = cmdName
 
 	err = fs.Parse(os.Args[2:])
 	if err != nil {
-		return nil, fs, err
+		return fs, err
 	}
 
-	cmd, err := parseCmdOptions(name, fs)
+	err = parseCmdOptions(env, fs)
 	if err != nil {
-		return nil, fs, err
+		return fs, err
 	}
-	return cmd, fs, nil
+	return fs, nil
 }
 
-func parseCmdOptions(name cmdName, fs *flag.FlagSet) (*cmd, error) {
-	switch name {
+func parseCmdOptions(env *env, fs *flag.FlagSet) error {
+	switch env.cmd {
 	case cnLinks:
-		return parseCmdLinks(fs)
+		return parseCmdLinks(env, fs)
 	case cnExport:
-		return parseCmdExport(fs)
+		return parseCmdExport(env, fs)
 	default:
-		return nil, fmt.Errorf("unknown command: " + string(name))
+		return fmt.Errorf("unknown command: " + string(env.cmd))
 	}
 }
 
-func parseCmdLinks(fs *flag.FlagSet) (*cmd, error) {
-	cmd, err := parseCmdText(cnLinks, fs)
+func parseCmdLinks(env *env, fs *flag.FlagSet) error {
+	err := parseCmdText(env, fs)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if len(cmd.args) == 0 {
-		return nil, fmt.Errorf("no search urls as arguments")
+	if len(env.args) == 0 {
+		return fmt.Errorf("no search urls as arguments")
 	}
 
-	return cmd, nil
+	return nil
 }
 
-func parseCmdExport(fs *flag.FlagSet) (*cmd, error) {
-	cmd, err := parseCmdText(cnExport, fs)
+func parseCmdExport(env *env, fs *flag.FlagSet) error {
+	err := parseCmdText(env, fs)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if cmd.out == "" {
-		return nil, fmt.Errorf("output file must be specified, see -out option")
+	if len(env.args) == 0 {
+		return fmt.Errorf("no link files as arguemnts")
 	}
 
-	if len(cmd.args) == 0 {
-		return nil, fmt.Errorf("no link files as arguemnts")
-	}
-
-	err = assertExistFiles(cmd.args...)
+	err = assertExistFiles(env.args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = assertRegularFiles(cmd.args...)
+	err = assertRegularFiles(env.args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return cmd, nil
+	return nil
 }
 
-func parseCmdText(name cmdName, fs *flag.FlagSet) (*cmd, error) {
+func parseCmdText(env *env, fs *flag.FlagSet) error {
 	var err error
+	env.args = fs.Args()
 
-	cmd := &cmd{
-		name: name,
-		args: fs.Args(),
-	}
-
-	fs.Visit(func(f *flag.Flag) {
+	fs.VisitAll(func(f *flag.Flag) {
 		if err != nil {
 			return
 		}
 
 		switch f.Name {
 		case flagOut:
-			cmd.out = f.Value.String()
+			env.out = f.Value.String()
 		case flagForce:
 			frc, e := parseForce(f.Value.String())
 			if e != nil {
 				err = e
 				return
 			}
-			cmd.force = frc
+			env.force = frc
 		case flagFormat:
 			frm, e := parseFormat(f.Value.String())
 			if e != nil {
 				err = e
 				return
 			}
-			cmd.format = frm
+			env.format = frm
+		case flagDatabase:
+			env.database = f.Value.String()
 		default:
 			err = fmt.Errorf("unknown option: " + f.Name)
 		}
 	})
 
-	if cmd.out != "" {
-		exist, err := isExistFile(cmd.out)
+	if env.out != "" {
+		exist, err := isExistFile(env.out)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if exist {
-			b, err := isRegularFile(cmd.out)
+			b, err := isRegularFile(env.out)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if !b {
-				return nil, fmt.Errorf("not a regular file: %v", cmd.out)
+				return fmt.Errorf("not a regular file: %v", env.out)
 			}
 
-			if !cmd.force {
-				return nil, fmt.Errorf(
+			if !env.force {
+				return fmt.Errorf(
 					"file already exists: %v, use the -force option to overwrite it",
-					cmd.out)
+					env.out)
 			}
 		}
 
 	}
 
-	if err != nil {
-		return nil, err
-	}
-	return cmd, nil
+	return err
 }
 
-func addOutFlag(cmd *flag.FlagSet) *string {
-	return cmd.String(
+const (
+	flagOut      = "out"
+	flagForce    = "force"
+	flagFormat   = "format"
+	flagDatabase = "database"
+)
+
+func addOutFlag(fs *flag.FlagSet) *string {
+	return fs.String(
 		flagOut,
 		"",
 		"Output file path. Use the -format option to specify the format.")
 }
 
-func addForceFlag(cmd *flag.FlagSet) *bool {
-	return cmd.Bool(
+func addForceFlag(fs *flag.FlagSet) *bool {
+	return fs.Bool(
 		flagForce,
 		false,
 		"Overwrite output file if it already exists.")
 }
 
-func addFormatFlag(cmd *flag.FlagSet) *string {
-	return cmd.String(
+func addFormatFlag(fs *flag.FlagSet) *string {
+	return fs.String(
 		flagFormat,
-		"xlsx",
-		"Format of the output file. Supported values are: xlsx.")
+		"csv",
+		"Format of the output file. Supported values are: csv, xlsx.")
 }
 
-func execCmd(cmd *cmd) error {
-	switch cmd.name {
+func addDatabaseFlag(fs *flag.FlagSet) *string {
+	return fs.String(
+		flagDatabase,
+		"frandb",
+		"Database directory.")
+}
+func (env *env) execCmd() error {
+	switch env.cmd {
 	case cnLinks:
-		return execCmdLinks(cmd)
+		return env.execCmdLinks()
 	case cnExport:
-		return execCmdExport(cmd)
+		return env.execCmdExport()
 	default:
-		return fmt.Errorf("unexpected command: " + string(cmd.name))
+		return fmt.Errorf("unexpected command: " + string(env.cmd))
 	}
 }
 
-func execCmdLinks(cmd *cmd) error {
-	w, closeFn, err := openOut(cmd.out, cmd.force)
+func (env *env) execCmdLinks() error {
+	w, closeFn, err := openOut(env.out, env.force)
 	if err != nil {
 		return err
 	}
 	defer closeFn()
-	return getLinks(w, cmd.args)
+	return env.getLinks(w)
 }
 
 func openOut(out string, force bool) (io.Writer, func(), error) {
@@ -338,11 +341,11 @@ func newChromeContext(ctx0 context.Context) (context.Context, func()) {
 	}
 }
 
-func getLinks(w io.Writer, urls []string) error {
+func (env *env) getLinks(w io.Writer) error {
 	ctx, cancel := newChromeContext(context.Background())
 	defer cancel()
 
-	for _, u := range urls {
+	for _, u := range env.args {
 		err := chromedp.Run(ctx, chromedp.Tasks{
 			chromedp.Navigate(u),
 			chromedp.WaitVisible(
@@ -365,7 +368,7 @@ func getLinks(w io.Writer, urls []string) error {
 			return err
 		}
 
-		rels, err := getLinksRel(ctx)
+		rels, err := env.getLinksRel(ctx)
 		if err != nil {
 			return err
 		}
@@ -392,7 +395,7 @@ func getLinks(w io.Writer, urls []string) error {
 	return nil
 }
 
-func getLinksRel(ctx context.Context) ([]string, error) {
+func (env *env) getLinksRel(ctx context.Context) ([]string, error) {
 	urls := make(map[string]struct{}, 100)
 	for {
 		attrs := make([]map[string]string, 0, 100)
@@ -458,20 +461,19 @@ func getLinksRel(ctx context.Context) ([]string, error) {
 	return res, nil
 }
 
-func execCmdExport(cmd *cmd) error {
-	//w, closeFn, err := openOut(cmd.out, cmd.force)
-	//if err != nil {
-	//	return err
-	//}
-	//defer closeFn()
-
-	dir := "frandb"
-	err := os.MkdirAll(dir, 0755)
+func (env *env) execCmdExport() error {
+	err := os.MkdirAll(env.database, 0755)
 	if err != nil {
 		return err
 	}
 
-	err = downloadFiles(dir, cmd.args)
+	w, closeFn, err := openOut(env.out, env.force)
+	if err != nil {
+		return err
+	}
+	defer closeFn()
+
+	err = env.exportFiles(w)
 	if err != nil {
 		return err
 	}
@@ -479,12 +481,12 @@ func execCmdExport(cmd *cmd) error {
 	return nil
 }
 
-func downloadFiles(dir string, files []string) error {
+func (env *env) exportFiles(w io.Writer) error {
 	ctx, cancel := newChromeContext(context.Background())
 	defer cancel()
 
-	for _, p := range files {
-		err := downloadFile(ctx, dir, p)
+	for _, p := range env.args {
+		err := env.exportFile(ctx, w, p)
 		if err != nil {
 			return err
 		}
@@ -493,16 +495,19 @@ func downloadFiles(dir string, files []string) error {
 	return nil
 }
 
-func downloadFile(ctx context.Context, dir string, p string) error {
+func (env *env) exportFile(ctx context.Context, w io.Writer, p string) error {
 	f, err := os.Open(p)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return downloadReader(ctx, dir, f)
+	return env.exportReader(w, f)
 }
 
-func downloadReader(ctx context.Context, dir string, r io.Reader) error {
+func (env *env) exportReader(w io.Writer, r io.Reader) error {
+	ctx, cancel := newChromeContext(context.Background())
+	defer cancel()
+
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
 		u := strings.TrimSpace(sc.Text())
@@ -510,7 +515,19 @@ func downloadReader(ctx context.Context, dir string, r io.Reader) error {
 			break
 		}
 
-		err := downloadUrl(ctx, dir, u)
+		p := dbFilepath(env.database, u)
+		exists, err := isExistFile(p)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			err := env.downloadUrl(ctx, p, u)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = env.export(w, p)
 		if err != nil {
 			return err
 		}
@@ -522,28 +539,22 @@ func downloadReader(ctx context.Context, dir string, r io.Reader) error {
 	return nil
 }
 
-type sec struct {
-	URL    string            `json:"url"`
-	ISIN   string            `json:"isin"`
-	Symbol string            `json:"symbol"`
-	Type   string            `json:"type"`
-	Name   string            `json:"name"`
-	Master map[string]string `json:"master"`
+func dbFilepath(dir, url string) string {
+	bname := path.Base(url)
+	return filepath.Join(dir, bname+".json")
 }
 
-func downloadUrl(ctx context.Context, dir string, u string) error {
-	bname := path.Base(u)
-	p := filepath.Join(dir, bname+".json")
-	fmt.Println(p)
-
-	exists, err := isExistFile(p)
+func (env *env) downloadUrl(ctx context.Context, p, u string) error {
+	flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
+	f, err := os.OpenFile(p, flags, 0755)
 	if err != nil {
 		return err
 	}
-	if exists {
-		return nil
-	}
+	defer f.Close()
+	return env.downloadUrlWriter(ctx, f, u)
+}
 
+func (env *env) downloadUrlWriter(ctx context.Context, w io.Writer, u string) error {
 	sec := &sec{
 		URL:    u,
 		Master: make(map[string]string),
@@ -556,7 +567,7 @@ func downloadUrl(ctx context.Context, dir string, u string) error {
 	labNodes := make([]*cdp.Node, 0, 100)
 	valNodes := make([]*cdp.Node, 0, 100)
 
-	err = chromedp.Run(ctx, chromedp.Tasks{
+	err := chromedp.Run(ctx, chromedp.Tasks{
 		chromedp.Navigate(u),
 		// wait for data to appear
 		chromedp.WaitVisible(
@@ -619,16 +630,22 @@ func downloadUrl(ctx context.Context, dir string, u string) error {
 		sec.Master[lab] = val
 	}
 
-	b, err := json.MarshalIndent(&sec, "", "  ")
-	if err != nil {
-		return err
-	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(&sec)
+}
 
-	err = os.WriteFile(p, b, 0755)
-	if err != nil {
-		return err
-	}
+type sec struct {
+	URL    string            `json:"url"`
+	ISIN   string            `json:"isin"`
+	Symbol string            `json:"symbol"`
+	Type   string            `json:"type"`
+	Name   string            `json:"name"`
+	Master map[string]string `json:"master"`
+}
 
+func (env *env) export(w io.Writer, p string) error {
+	fmt.Println(p)
 	return nil
 }
 
