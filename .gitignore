@@ -22,4 +22,6 @@ go.work
 *.swp
 *.txt
 *.xlsx
+*.csv
+frandb
 

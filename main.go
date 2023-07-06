@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"sort"
 	"strings"
-	//"sort"
 	"time"
 	//"log"
 	"context"
@@ -16,6 +16,7 @@ import (
 	"path"
 	"path/filepath"
 	//"github.com/chromedp/cdproto/runtime"
+	"encoding/csv"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 )
@@ -50,14 +51,14 @@ type env struct {
 type cmdName string
 
 const (
-	cnLinks  cmdName = "urls"
+	cnUrls   cmdName = "urls"
 	cnExport cmdName = "export"
 )
 
 func parseCmdName(name string) (cmdName, error) {
 	switch name {
-	case string(cnLinks):
-		return cnLinks, nil
+	case string(cnUrls):
+		return cnUrls, nil
 	case string(cnExport):
 		return cnExport, nil
 	default:
@@ -68,16 +69,16 @@ func parseCmdName(name string) (cmdName, error) {
 type format string
 
 const (
-	fXlsx format = "xlsx"
-	fCsv  format = "csv"
+	fCsv format = "csv"
+	//fXlsx format = "xlsx"
 )
 
 func parseFormat(val string) (format, error) {
 	switch val {
-	case string(fXlsx):
-		return fXlsx, nil
 	case string(fCsv):
 		return fCsv, nil
+	//case string(fXlsx):
+	//	return fXlsx, nil
 	default:
 		return "", fmt.Errorf("unknown format: " + val)
 	}
@@ -136,8 +137,8 @@ func parseCmd(env *env) (*flag.FlagSet, error) {
 
 func parseCmdOptions(env *env, fs *flag.FlagSet) error {
 	switch env.cmd {
-	case cnLinks:
-		return parseCmdLinks(env, fs)
+	case cnUrls:
+		return parseCmdUrls(env, fs)
 	case cnExport:
 		return parseCmdExport(env, fs)
 	default:
@@ -145,7 +146,7 @@ func parseCmdOptions(env *env, fs *flag.FlagSet) error {
 	}
 }
 
-func parseCmdLinks(env *env, fs *flag.FlagSet) error {
+func parseCmdUrls(env *env, fs *flag.FlagSet) error {
 	err := parseCmdText(env, fs)
 	if err != nil {
 		return err
@@ -266,7 +267,7 @@ func addFormatFlag(fs *flag.FlagSet) *string {
 	return fs.String(
 		flagFormat,
 		"csv",
-		"Format of the output file. Supported values are: csv, xlsx.")
+		"Format of the output file. Supported values are: csv.")
 }
 
 func addDatabaseFlag(fs *flag.FlagSet) *string {
@@ -277,8 +278,8 @@ func addDatabaseFlag(fs *flag.FlagSet) *string {
 }
 func (env *env) execCmd() error {
 	switch env.cmd {
-	case cnLinks:
-		return env.execCmdLinks()
+	case cnUrls:
+		return env.execCmdUrls()
 	case cnExport:
 		return env.execCmdExport()
 	default:
@@ -286,13 +287,13 @@ func (env *env) execCmd() error {
 	}
 }
 
-func (env *env) execCmdLinks() error {
+func (env *env) execCmdUrls() error {
 	w, closeFn, err := openOut(env.out, env.force)
 	if err != nil {
 		return err
 	}
 	defer closeFn()
-	return env.getLinks(w)
+	return env.getUrls(w)
 }
 
 func openOut(out string, force bool) (io.Writer, func(), error) {
@@ -341,7 +342,7 @@ func newChromeContext(ctx0 context.Context) (context.Context, func()) {
 	}
 }
 
-func (env *env) getLinks(w io.Writer) error {
+func (env *env) getUrls(w io.Writer) error {
 	ctx, cancel := newChromeContext(context.Background())
 	defer cancel()
 
@@ -368,7 +369,7 @@ func (env *env) getLinks(w io.Writer) error {
 			return err
 		}
 
-		rels, err := env.getLinksRel(ctx)
+		rels, err := env.getUrlsRel(ctx)
 		if err != nil {
 			return err
 		}
@@ -380,12 +381,7 @@ func (env *env) getLinks(w io.Writer) error {
 
 		host := uu.Scheme + "://" + uu.Host
 		for _, rel := range rels {
-			l, err := url.Parse(path.Join(host, rel))
-			if err != nil {
-				return err
-			}
-
-			_, err = fmt.Fprintln(w, l)
+			_, err = fmt.Fprintln(w, host+rel)
 			if err != nil {
 				return err
 			}
@@ -395,27 +391,26 @@ func (env *env) getLinks(w io.Writer) error {
 	return nil
 }
 
-func (env *env) getLinksRel(ctx context.Context) ([]string, error) {
-	urls := make(map[string]struct{}, 100)
+func (env *env) getUrlsRel(ctx context.Context) ([]string, error) {
+	urls := make([]string, 0, 100)
 	for {
-		attrs := make([]map[string]string, 0, 100)
+		anchors := make([]*cdp.Node, 0, 100)
 
 		err := chromedp.Run(ctx, chromedp.Tasks{
-			chromedp.AttributesAll(
+			chromedp.Nodes(
 				`//app-equity-search-result-table//div[contains(@class, 'table-responsive')]//tbody//tr//td[1]//a`,
-				&attrs,
+				&anchors,
 				chromedp.BySearch),
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		for _, a := range attrs {
-			rel, err := url.Parse(a["href"])
-			if err != nil {
-				return nil, err
+		for _, a := range anchors {
+			href, ok := a.Attribute("href")
+			if ok {
+				urls = append(urls, href)
 			}
-			urls[rel.String()] = struct{}{}
 		}
 
 		nodes := make([]*cdp.Node, 0, 100)
@@ -453,12 +448,7 @@ func (env *env) getLinksRel(ctx context.Context) ([]string, error) {
 		}
 	}
 
-	res := make([]string, 0, len(urls))
-	for k, _ := range urls {
-		res = append(res, k)
-	}
-
-	return res, nil
+	return urls, nil
 }
 
 func (env *env) execCmdExport() error {
@@ -473,20 +463,51 @@ func (env *env) execCmdExport() error {
 	}
 	defer closeFn()
 
-	err = env.exportFiles(w)
+	secs, err := env.loadSecsFiles()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	env.sort(secs)
+	return env.export(w, secs)
 }
 
-func (env *env) exportFiles(w io.Writer) error {
-	ctx, cancel := newChromeContext(context.Background())
-	defer cancel()
+func (env *env) sort(secs []*sec) {
+	sort.Sort(bySubsector(secs))
+}
 
-	for _, p := range env.args {
-		err := env.exportFile(ctx, w, p)
+type bySubsector []*sec
+
+func (a bySubsector) Len() int {
+	return len(a)
+}
+
+func (a bySubsector) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a bySubsector) Less(i, j int) bool {
+	return a[i].Master["subsector"] < a[j].Master["subsector"]
+}
+
+func (env *env) export(w io.Writer, secs []*sec) error {
+	return env.exportCSV(w, secs)
+}
+
+func (env *env) exportCSV(w io.Writer, secs []*sec) error {
+	enc, flushFn := env.newCSVWriter(w)
+	defer flushFn()
+
+	for _, sec := range secs {
+		rec := []string{
+			sec.Name,
+			sec.ISIN,
+			sec.Symbol,
+			sec.Master["subsector"],
+			sec.Master["sector"],
+			sec.Master["industry"],
+		}
+		err := enc.Write(rec)
 		if err != nil {
 			return err
 		}
@@ -495,48 +516,94 @@ func (env *env) exportFiles(w io.Writer) error {
 	return nil
 }
 
-func (env *env) exportFile(ctx context.Context, w io.Writer, p string) error {
-	f, err := os.Open(p)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return env.exportReader(w, f)
+func (env *env) newCSVWriter(w io.Writer) (*csv.Writer, func()) {
+	enc := csv.NewWriter(w)
+	enc.Comma = ';'
+	return enc, func() { enc.Flush() }
 }
 
-func (env *env) exportReader(w io.Writer, r io.Reader) error {
+func (env *env) loadSecsFiles() ([]*sec, error) {
 	ctx, cancel := newChromeContext(context.Background())
 	defer cancel()
+
+	secs := make([]*sec, 0, 100)
+	for _, p := range env.args {
+		a, err := env.loadSecsFile(ctx, p)
+		if err != nil {
+			return nil, fmt.Errorf("reading file: %v: %v", p, err)
+		}
+		secs = append(secs, a...)
+	}
+
+	return secs, nil
+}
+
+func (env *env) loadSecsFile(ctx context.Context, p string) ([]*sec, error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return env.loadSecsReader(f)
+}
+
+func (env *env) loadSecsReader(r io.Reader) ([]*sec, error) {
+	ctx, cancel := newChromeContext(context.Background())
+	defer cancel()
+
+	secs := make([]*sec, 0, 100)
 
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
 		u := strings.TrimSpace(sc.Text())
-		if sc.Err() != nil {
-			break
+		if err := sc.Err(); err != nil {
+			return nil, err
+		}
+
+		if u == "" || strings.HasPrefix(u, "#") {
+			continue
 		}
 
 		p := dbFilepath(env.database, u)
 		exists, err := isExistFile(p)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !exists {
 			err := env.downloadUrl(ctx, p, u)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 
-		err = env.export(w, p)
+		sec, err := env.loadSec(p)
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		secs = append(secs, sec)
 	}
 	if err := sc.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+		return nil, err
+	}
+	return secs, nil
+}
+
+func (env *env) loadSec(p string) (*sec, error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	sec := &sec{}
+	dec := json.NewDecoder(f)
+	err = dec.Decode(sec)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	return sec, nil
 }
 
 func dbFilepath(dir, url string) string {
@@ -644,11 +711,6 @@ type sec struct {
 	Master map[string]string `json:"master"`
 }
 
-func (env *env) export(w io.Writer, p string) error {
-	fmt.Println(p)
-	return nil
-}
-
 func runWithTimeOut(
 	ctx context.Context,
 	timeout time.Duration,
@@ -671,16 +733,16 @@ type cmdHelp struct {
 
 var cmdHelps = []*cmdHelp{
 	&cmdHelp{
-		name:    cnLinks,
+		name:    cnUrls,
 		syntax:  `fran urls [-out=<file>] [--force] <search_url>...`,
 		desc:    `Collects page urls from search results.`,
-		example: `fran urls -out="urls-eu.txt" "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&MARKET=REGULATED&ORDER_BY=TURNOVER&ORDER_DIRECTION=DESC"`,
+		example: `fran urls -out="eu.txt" "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&MARKET=REGULATED&ORDER_BY=NAME&ORDER_DIRECTION=ASC"`,
 	},
 	&cmdHelp{
 		name:    cnExport,
 		syntax:  `fran export [-format=<format>] [-out=<file>] [--force] <urls_file>...`,
 		desc:    `Downloads master data from page urls and produces it in the specified format. See the supported formats at the -format option.`,
-		example: `fran export -format=xlsx -out="eu-and-us.xlsx" "urls-eu.txt" "urls-us.txt"`,
+		example: `fran export -format="csv" -out="eu.csv" "eu.txt"`,
 	},
 }
 
