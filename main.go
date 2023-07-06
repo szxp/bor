@@ -487,7 +487,27 @@ func (a bySubsector) Swap(i, j int) {
 }
 
 func (a bySubsector) Less(i, j int) bool {
-	return a[i].Master["subsector"] < a[j].Master["subsector"]
+	sec1 := a[i].Master["sector"]
+	sec2 := a[j].Master["sector"]
+	if sec1 < sec2 {
+		return true
+	}
+	if sec1 > sec2 {
+		return false
+	}
+
+	sub1 := a[i].Master["subsector"]
+	sub2 := a[j].Master["subsector"]
+	if sub1 < sub2 {
+		return true
+	}
+	if sub1 > sub2 {
+		return false
+	}
+
+	nam1 := a[i].Name
+	nam2 := a[j].Name
+	return nam1 < nam2
 }
 
 func (env *env) export(w io.Writer, secs []*sec) error {
@@ -498,11 +518,30 @@ func (env *env) exportCSV(w io.Writer, secs []*sec) error {
 	enc, flushFn := env.newCSVWriter(w)
 	defer flushFn()
 
+	headers := []string{
+		"Name",
+		"ISIN",
+		"Symbol",
+		"Type",
+		"Form",
+		"Market",
+		"Subsector",
+		"Sector",
+		"Industry",
+	}
+	err := enc.Write(headers)
+	if err != nil {
+		return err
+	}
+
 	for _, sec := range secs {
 		rec := []string{
 			sec.Name,
 			sec.ISIN,
 			sec.Symbol,
+			sec.Master["type"],
+			sec.Master["form"],
+			sec.Master["market"],
 			sec.Master["subsector"],
 			sec.Master["sector"],
 			sec.Master["industry"],
