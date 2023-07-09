@@ -1,5 +1,5 @@
 # fran
-Börse Frankfurt scraper
+Börse Frankfurt web scraper for retrieving data from [https://boerse-frankfurt.de](https://boerse-frankfurt.de).
 
 Downloads master data from page urls and produces it in the specified format (i. e. CSV). Uses Chrome browser for scaping, so it must be installed.
 
