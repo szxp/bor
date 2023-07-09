@@ -10,15 +10,14 @@ import (
 	"time"
 	//"log"
 	"context"
+	"encoding/csv"
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/chromedp"
 	"io"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
-	//"github.com/chromedp/cdproto/runtime"
-	"encoding/csv"
-	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/chromedp"
 )
 
 func main() {
@@ -193,23 +192,23 @@ func parseCmdText(env *env, fs *flag.FlagSet) error {
 
 		switch f.Name {
 		case flagOut:
-			env.out = f.Value.String()
+			env.out = strings.TrimSpace(f.Value.String())
 		case flagForce:
-			frc, e := parseForce(f.Value.String())
+			frc, e := parseForce(strings.TrimSpace(f.Value.String()))
 			if e != nil {
 				err = e
 				return
 			}
 			env.force = frc
 		case flagFormat:
-			frm, e := parseFormat(f.Value.String())
+			frm, e := parseFormat(strings.TrimSpace(f.Value.String()))
 			if e != nil {
 				err = e
 				return
 			}
 			env.format = frm
 		case flagDatabase:
-			env.database = f.Value.String()
+			env.database = strings.TrimSpace(f.Value.String())
 		default:
 			err = fmt.Errorf("unknown option: " + f.Name)
 		}
@@ -253,7 +252,7 @@ func addOutFlag(fs *flag.FlagSet) *string {
 	return fs.String(
 		flagOut,
 		"",
-		"Output file path. Use the -format option to specify the format.")
+		"Output file path. If not specified or an empty string is specified the output will be written to the standard output. Use the -format option to specify the format of the file.")
 }
 
 func addForceFlag(fs *flag.FlagSet) *bool {
@@ -274,7 +273,7 @@ func addDatabaseFlag(fs *flag.FlagSet) *string {
 	return fs.String(
 		flagDatabase,
 		"frandb",
-		"Database directory.")
+		"Database directory where the downloaded data will be saved and cached.")
 }
 func (env *env) execCmd() error {
 	switch env.cmd {
@@ -775,13 +774,13 @@ var cmdHelps = []*cmdHelp{
 		name:    cnUrls,
 		syntax:  `fran urls [-out=<file>] [--force] <search_url>...`,
 		desc:    `Collects page urls from search results.`,
-		example: `fran urls -out="eu.txt" "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&MARKET=REGULATED&ORDER_BY=NAME&ORDER_DIRECTION=ASC"`,
+		example: `fran urls -out="eu.txt" -force "https://www.boerse-frankfurt.de/equities/search?REGIONS=Europe&TYPE=1002&FORM=2&MARKET=REGULATED&ORDER_BY=NAME&ORDER_DIRECTION=ASC"`,
 	},
 	&cmdHelp{
 		name:    cnExport,
 		syntax:  `fran export [-format=<format>] [-out=<file>] [--force] <urls_file>...`,
 		desc:    `Downloads master data from page urls and produces it in the specified format. See the supported formats at the -format option.`,
-		example: `fran export -format="csv" -out="eu.csv" "eu.txt"`,
+		example: `fran export -format="csv" -out="eu.csv" -force "eu.txt"`,
 	},
 }
 
