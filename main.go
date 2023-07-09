@@ -568,7 +568,7 @@ func (env *env) loadSecsFiles() ([]*sec, error) {
 	for _, p := range env.args {
 		a, err := env.loadSecsFile(ctx, p)
 		if err != nil {
-			return nil, fmt.Errorf("reading file: %v: %v", p, err)
+			return nil, fmt.Errorf("reading urls file: %v: %v", p, err)
 		}
 		secs = append(secs, a...)
 	}
@@ -616,7 +616,7 @@ func (env *env) loadSecsReader(r io.Reader) ([]*sec, error) {
 
 		sec, err := env.loadSec(p)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("load: %v: %v", p, err)
 		}
 
 		secs = append(secs, sec)
@@ -630,7 +630,7 @@ func (env *env) loadSecsReader(r io.Reader) ([]*sec, error) {
 func (env *env) loadSec(p string) (*sec, error) {
 	f, err := os.Open(p)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open %v: %v", p, err)
 	}
 	defer f.Close()
 
@@ -638,7 +638,7 @@ func (env *env) loadSec(p string) (*sec, error) {
 	dec := json.NewDecoder(f)
 	err = dec.Decode(sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode json: %v", err)
 	}
 
 	return sec, nil
@@ -653,7 +653,7 @@ func (env *env) downloadUrl(ctx context.Context, p, u string) error {
 	flags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
 	f, err := os.OpenFile(p, flags, 0755)
 	if err != nil {
-		return err
+		return fmt.Errorf("open %v: %v", p, err)
 	}
 	defer f.Close()
 	return env.downloadUrlWriter(ctx, f, u)
@@ -779,7 +779,7 @@ var cmdHelps = []*cmdHelp{
 	&cmdHelp{
 		name:    cnExport,
 		syntax:  `fran export [-format=<format>] [-out=<file>] [--force] <urls_file>...`,
-		desc:    `Downloads master data from page urls and produces it in the specified format. See the supported formats at the -format option.`,
+		desc:    `Downloads master data from page urls and produces it in the specified format. See the supported formats at the -format option. Lines starting with hashmark (#) in the urls file are considered as comments and will be skipped.`,
 		example: `fran export -format="csv" -out="eu.csv" -force "eu.txt"`,
 	},
 }

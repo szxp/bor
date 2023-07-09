@@ -1,7 +1,7 @@
 # fran
 Börse Frankfurt scraper
 
-Downloads master data from page urls and produces it in the specified format (i. e. CSV).
+Downloads master data from page urls and produces it in the specified format (i. e. CSV). Uses Chrome browser for scaping, so it must be installed.
 
 ## Run
 ```bash
@@ -29,7 +29,7 @@ Commands:
   export
     fran export [-format=<format>] [-out=<file>] [--force] <urls_file>...
 
-    Downloads master data from page urls and produces it in the specified format. See the supported formats at the -format option.
+    Downloads master data from page urls and produces it in the specified format. See the supported formats at the -format option. Lines starting with hashmark (#) in the urls file are considered as comments and will be skipped.
 
     Example
     fran export -format="csv" -out="eu.csv" "eu.txt"
